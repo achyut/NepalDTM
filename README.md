@@ -6,7 +6,7 @@ NepalDTM is a bare-earth elevation model of Nepal on an 8 m grid. The High Mount
 
 On 4,463,463 held-out ICESat-2 points inside Nepal, with whole 48 km blocks left out of training, the RMSE is 6.10 m. Copernicus GLO-30 on the same points is 9.07 m. Inside the delivered grid, 37% of the area uses the 8 m mosaic and 63% is Copernicus fill, so the file spacing is not 8 m terrain detail everywhere.
 
-The short paper is [`paper/paper.tex`](paper/paper.tex). The longer guide is [`paper/whitepaper.tex`](paper/whitepaper.tex). Both quote [`validation/validation_report.json`](validation/validation_report.json).
+The paper is [`paper/paper.tex`](paper/paper.tex), with the figures in [`paper/figures`](paper/figures). The longer guide is [`paper/whitepaper.tex`](paper/whitepaper.tex). Both quote [`validation/validation_report.json`](validation/validation_report.json).
 
 ## Results
 
@@ -58,7 +58,7 @@ A national run downloads tens of gigabytes. Cells and tiles already on disk are 
 
 ## Citation
 
-Please cite the paper. The arXiv identifier below is a placeholder until the paper is announced. Replace `XXXX.XXXXX` with the identifier arXiv assigns. The steps are in [`ARXIV.md`](ARXIV.md).
+Please cite the paper. The arXiv identifier below is a placeholder until the paper is announced. Replace `XXXX.XXXXX` with the identifier arXiv assigns.
 
 Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model of Nepal from multi-source satellite data fusion. https://github.com/achyut/NepalDTM
 
