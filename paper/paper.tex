@@ -1,0 +1,190 @@
+% arXiv submission. Compile: tectonic paper.tex
+%   or: pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper
+% Form values are in ../ARXIV.md. The longer guide is whitepaper.tex.
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xurl}
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\hypersetup{%
+  pdftitle={NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal},
+  pdfauthor={Achyut Paudel}%
+}
+
+\title{NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal\\
+from Multi-Source Satellite Data Fusion}
+\author{Achyut Paudel\\
+\small \href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+NepalDTM is an open bare-earth elevation model of Nepal on an 8~m grid.
+Where the NASA High Mountain Asia 8~m stereo mosaic exists it is the surface; elsewhere the surface is Copernicus GLO-30.
+A histogram gradient-boosting model, trained on 6,230,548 ICESat-2 and 7,035,904 GEDI ground points, predicts how far that surface sits above the ground.
+On 4,463,463 held-out ICESat-2 points inside Nepal, leaving out whole 48~km blocks, the root-mean-square error is 6.10~m, against 9.07~m for Copernicus GLO-30, 8.47~m for GEDTM30, and 7.78~m for FABDEM.
+The bias is $-0.15$~m.
+Inside the delivered grid, 37\% of the area uses the 8~m mosaic and 63\% is filled from Copernicus, so the posted spacing is not 8~m terrain detail everywhere.
+Tiles, the validation files, and the code that rebuilds the model are public.
+\end{abstract}
+
+\noindent\textbf{Keywords:} NepalDTM; digital terrain model; bare earth; ICESat-2; GEDI; Nepal
+
+\section{Introduction}
+
+Flood maps and landslide assessments need the elevation of the ground, not the elevation of trees and roofs.
+Nepal has no public high-resolution bare-earth model.
+Copernicus GLO-30 is a global 30~m radar surface \citep{esa2021copernicus}.
+The High Mountain Asia 8~m mosaics are a stereo surface of glacier and snow regions \citep{shean2017hma}.
+FABDEM \citep{hawker2022fabdem} and GEDTM30 \citep{ho2025gedtm30} remove vegetation and buildings from global 30~m data.
+GEDTM30 is fit using ICESat-2, so a score against those points is not an independent test of that model.
+
+NepalDTM keeps the 8~m mosaic where it exists, fills the rest from Copernicus, and subtracts a predicted above-ground height.
+The correction is trained on ICESat-2 ATL08 \citep{markus2017icesat2,neuenschwander2019atl08} and GEDI L2A \citep{dubayah2020gedi}.
+Heights are EGM2008 orthometric metres \citep{pavlis2012egm2008}.
+The delivered grid covers 148,380~km\textsuperscript{2} inside the national outline used for tiling.
+
+\section{Data and method}
+
+The product is 324 tiles of 24~km on UTM zone 45N (EPSG:32645).
+Each core is $3{,}000 \times 3{,}000$ pixels at 8~m.
+A 1~km buffer is used while the predictors are built and is dropped from the delivered tile.
+
+Table~\ref{tab:data} lists the inputs.
+ICESat-2 points are kept when the height is valid, the segment is snow-free, the beam is strong, and the multiple-scattering warning is at most 1.
+The usual mountain cut on height uncertainty is not used, because that threshold grows with slope.
+GEDI points are the lowest-mode elevations that pass the SlideRule quality and degrade filters, come from a power beam, and have sensitivity above 0.95.
+Each GEDI point has half the weight of an ICESat-2 point.
+After those filters, 13,266,452 points fall on the tiles.
+
+\begin{table}[ht]
+  \centering
+  \caption{Inputs. The HMA role is the base surface where the mosaic has a finite height. Copernicus fills the rest.}
+  \label{tab:data}
+  \small
+  \begin{tabular}{@{}lllp{4.6cm}@{}}
+    \toprule
+    Dataset & Spacing & What it is & Role \\
+    \midrule
+    HMA DEM 8~m & 8~m & Stereo surface & Base surface \\
+    Copernicus GLO-30 & 30~m & Radar surface & Fill, and a predictor \\
+    ICESat-2 ATL08 & $\sim$20~m along track & Ground height & Training and test \\
+    GEDI L2A & 25~m footprint & Ground under canopy & Training, half weight \\
+    Canopy height & 1~m & Vegetation height & Predictor \\
+    WorldCover 2021 & 10~m & Land-cover class & Predictor \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+On each tile the mosaic is shifted from the ellipsoid onto EGM2008.
+Pixels whose difference from Copernicus is more than 40~m from the median difference on that tile are dropped.
+Gaps are filled from Copernicus.
+The predictors at 8~m are the mean, 75th percentile, and maximum of the canopy-height map \citep{tolan2024canopy}; the majority WorldCover class \citep{zanaga2022worldcover}; slope, aspect, ruggedness, and topographic position at about 100~m and 500~m; the difference between the surface and Copernicus; a flag for mosaic versus Copernicus fill; and the surface height itself.
+
+The target is surface minus ground.
+A histogram gradient-boosting model \citep{pedregosa2011sklearn} with absolute-error loss predicts that residual.
+Each fit uses at most 3,000,000 of the 13,266,452 points.
+The bare-earth value is the surface minus the predicted residual.
+A second model predicts the absolute error at each pixel.
+The headline test is five-fold GroupKFold on 94 blocks of 48~km, so a test block is absent from its training fold.
+A second test holds out whole satellite passes.
+The single model that is written into the tiles is fit after those tests.
+
+\section{Results}
+
+Scores in Table~\ref{tab:national} are out-of-fold residuals on the 4,463,463 ICESat-2 points inside Nepal at which NepalDTM, Copernicus, GEDTM30, and FABDEM all have a value.
+RMSE is the root-mean-square error.
+NMAD is the normalised median absolute deviation, $1.4826$ times the median absolute deviation from the median.
+Bias is the mean error; positive means the model is too high.
+The same spatial predictions on all 6,230,548 ICESat-2 points, before the common-support cut, have RMSE 5.49~m.
+That figure is not comparable with the other models.
+
+\begin{table}[ht]
+  \centering
+  \caption{Held-out ICESat-2 error inside Nepal, in metres, on 4,463,463 points.}
+  \label{tab:national}
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Model & RMSE & NMAD & Bias \\
+    \midrule
+    NepalDTM, 48~km blocks & 6.10 & 2.61 & $-0.15$ \\
+    NepalDTM, satellite passes & 6.01 & 2.54 & $-0.13$ \\
+    Copernicus GLO-30 & 9.07 & 3.51 & $+3.87$ \\
+    GEDTM30 v1.2 & 8.47 & 3.96 & $+1.80$ \\
+    FABDEM V1-2 & 7.78 & 3.14 & $+1.90$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Table~\ref{tab:zone} splits a larger common set of 6,227,829 points by the surface elevation.
+Those rows include points in the tile buffer outside the national polygon.
+Province scores, which do partition the 4,463,463 points inside Nepal, run from 1.78~m RMSE in Madhesh to 6.86~m in Karnali.
+Under forest the common-set RMSE is 6.82~m, against 11.20~m for Copernicus.
+Off forest it is 4.94~m, against 6.89~m.
+Above 40 degrees of slope it is 10.81~m.
+Where the base surface is the 8~m mosaic the common-set RMSE is 4.00~m; where it is Copernicus fill, 6.71~m.
+Of the area inside the national outline, 37\% uses the mosaic and 63\% is Copernicus fill.
+
+\begin{table}[ht]
+  \centering
+  \caption{Spatial-holdout RMSE in metres by surface elevation, on the 6,227,829-point common set.}
+  \label{tab:zone}
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    Zone & $n$ & NepalDTM & Copernicus & GEDTM30 & FABDEM \\
+    \midrule
+    Below 300~m & 1,251,581 & 1.96 & 4.53 & 2.12 & 2.46 \\
+    300--1,000~m & 487,932 & 5.18 & 8.53 & 5.87 & 6.16 \\
+    1--2.5~km & 1,076,095 & 6.24 & 8.69 & 7.57 & 7.33 \\
+    2.5--4~km & 776,214 & 8.27 & 12.88 & 10.45 & 10.27 \\
+    Above 4~km & 2,636,007 & 5.33 & 7.55 & 8.98 & 7.50 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A separate check uses differential GPS surveyed on and beside Khumbu Glacier in 2015--2016 \citep{quincey2016khumbu}.
+None of these points were used to train the model.
+Against the \emph{surface} tile, the RMSE is 2.49~m at glacier margins ($n=83$), 2.96~m on the glacier surface ($n=388$), and 1.02~m on the wind-tower grid ($n=85$).
+Against the bare-earth tile the same groups are 3.89~m, 6.01~m, and 6.59~m.
+On the glacier surface the bare-earth model is 4.85~m low.
+The correction is treating ice texture as something to remove.
+The median absolute step across a delivered tile edge is 2.08~m, against 2.06~m inside a tile.
+A shift search against ICESat-2 on open slopes finds no horizontal offset in any province.
+
+\section{Limitations}
+
+The 8~m spacing is the stored grid.
+Terrain shape at that spacing exists where the HMA mosaic supplies the surface.
+Elsewhere the hills and valleys are still the Copernicus 30~m shape, with a canopy adjustment on top.
+Above 40 degrees the RMSE exceeds 10~m.
+Part of that is the reference: a horizontal miss of a few metres becomes a large height error on a steep face.
+Glacier values in the bare-earth model should be read as a corrected surface, not as bedrock.
+The median predicted absolute error, stored on the error tile, is 4.3~m, and the 90th percentile is 8.8~m.
+
+\section{Data and code}
+
+Cloud Optimized GeoTIFF tiles (surface, bare earth, and predicted absolute error) are at
+\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/cog/}.
+The web map reads
+\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/NepalDTM.pmtiles}.
+The code that rebuilds the model, and the validation files this paper quotes, are at
+\url{https://github.com/achyut/NepalDTM}.
+From the \texttt{code} directory, \texttt{python run.py all} downloads the inputs, fits the correction, writes the tiles, and runs the validation.
+A NASA Earthdata token in \texttt{\textasciitilde/.earthdata\_token} is required and is not in the repository.
+The code writes three VRTs, \texttt{nepal\_dem\_8m.vrt}, \texttt{nepal\_dtm\_8m.vrt}, and \texttt{nepal\_aux\_8m.vrt}, whose sources are the local \texttt{out/} tiles.
+Code is MIT.
+The NepalDTM tiles are CC BY 4.0.
+Input datasets keep their own licences.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

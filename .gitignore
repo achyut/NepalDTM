@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+code/data/nw/
+code/data/external/
+*.tif
+*.tiff
+*.vrt
+*.pmtiles
+*.npz
+*.npy
+*.joblib
+*.h5
+.env
+*token*
