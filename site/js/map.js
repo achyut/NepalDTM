@@ -126,11 +126,11 @@ initThemeToggle(theme => {
 
 let exaggeration = 1.5;
 
-function setMode(three) {
+function setMode(three, pitch) {
     $('mode-3d').setAttribute('aria-pressed', three);
     $('mode-2d').setAttribute('aria-pressed', !three);
     map.setTerrain(three ? {source: 'terrain', exaggeration} : null);
-    map.easeTo({pitch: three ? Math.max(map.getPitch(), 55) : 0, duration: 800});
+    if (pitch !== false) map.easeTo({pitch: three ? Math.max(map.getPitch(), 55) : 0, duration: 800});
 }
 
 $('mode-2d').onclick = () => setMode(false);
@@ -150,6 +150,11 @@ function showBearing() {
     $('bearing').value = b;
     $('bearing-val').textContent = `${b}°`;
 }
+function showPitch() {
+    const p = Math.round(map.getPitch());
+    $('pitch').value = p;
+    $('pitch-val').textContent = `${p}°`;
+}
 let spinning = false;
 function stopSpin() {
     if (!spinning) return;
@@ -161,9 +166,17 @@ function spinStep() {
     if (spinning) map.easeTo({bearing: map.getBearing() + 45, duration: 9000, easing: t => t});
 }
 map.on('rotate', showBearing);
+map.on('pitch', showPitch);
 map.on('moveend', spinStep);
 showBearing();
+showPitch();
 $('bearing').oninput = e => { stopSpin(); map.setBearing(+e.target.value); };
+// Tilting needs the terrain on, so dragging the slider up switches to 3D.
+$('pitch').oninput = e => {
+    const p = +e.target.value;
+    if (p > 0 && !map.getTerrain()) setMode(true, false);
+    map.setPitch(p);
+};
 $('rot-left').onclick = () => { stopSpin(); map.easeTo({bearing: map.getBearing() - 90, duration: 900}); };
 $('rot-right').onclick = () => { stopSpin(); map.easeTo({bearing: map.getBearing() + 90, duration: 900}); };
 $('rot-north').onclick = () => { stopSpin(); map.easeTo({bearing: 0, duration: 900}); };
