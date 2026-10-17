@@ -20,6 +20,7 @@ const PLACES = {
 // terrain tiles in workers (derive.js) and drawn under a soft hillshade so the landform still reads.
 const VIZ = {
     'hillshade': {label: 'Hillshade', shade: 'full'},
+    'swiss': {label: 'Swiss relief', swiss: true},
     'color-relief': {label: 'Color relief', relief: true},
     'slope': {label: 'Slope', derived: 'slope', shade: 'soft'},
     'aspect': {label: 'Aspect', derived: 'aspect', shade: 'soft'},
@@ -47,7 +48,9 @@ style.layers.splice(style.layers.findIndex(l => l.id === 'hillshade'), 0, ...Obj
 // Real sun: MapLibre's hillshade turns to the sun on the GPU while the time slider moves; cast shadows from the
 // workers fill in when it is let go. At night a dark veil covers the country.
 style.sources['derive-shadow'] = derivedSource('shadow', DATA_BOUNDS, '?az=180&alt=45');
+style.sources['derive-swiss'] = derivedSource('swiss', DATA_BOUNDS, '?az=315&alt=45');
 style.layers.splice(style.layers.findIndex(l => l.id === 'mask'), 0,
+    {id: 'swiss', type: 'raster', source: 'derive-swiss', layout: {visibility: 'none'}, paint: {'raster-fade-duration': 0}},
     {id: 'shadow', type: 'raster', source: 'derive-shadow', layout: {visibility: 'none'}, paint: {'raster-fade-duration': 0}},
     {id: 'night', type: 'fill', source: 'nepal', layout: {visibility: 'none'}, paint: {'fill-color': '#0a1528', 'fill-opacity': 0.55}});
 
@@ -176,7 +179,9 @@ for (const ev of ['mousedown', 'touchstart', 'wheel']) map.getCanvas().addEventL
 
 function vizLayers(name) {
     const v = VIZ[name], on = x => x ? 'visible' : 'none';
-    return {relief: on(v.relief || (name === 'hillshade' && colorOn)), hillshade: on(v.shade || light === 'sun'),
+    const coloured = (name === 'hillshade' || name === 'swiss') && colorOn;
+    return {relief: on(v.relief || coloured), swiss: on(v.swiss),
+            hillshade: on((v.shade || light === 'sun') && !v.swiss),
             ...Object.fromEntries(Object.keys(DERIVED).map(k => [k, on(v.derived === k)]))};
 }
 function shadeOf(name) { return SHADE[VIZ[name].shade === 'soft' ? 'soft' : light === 'sun' ? 'sun' : 'full']; }
@@ -192,6 +197,9 @@ function swatch(name, theme) {
     return {
         'hillshade': theme === 'dark' ? 'linear-gradient(135deg, #c9d2df, #5d6b80 55%, #1d2638)'
                                       : 'linear-gradient(135deg, #fffbe6, #9aa6b4 55%, #4a5a6c)',
+        'swiss': theme === 'dark'
+            ? 'linear-gradient(135deg, #e8eef6, #8ea3bd 45%, #2a3446)'
+            : 'linear-gradient(135deg, #fffcee, #b0c2d6 45%, #263040)',
         'color-relief': relief,
         'color-hillshade': `linear-gradient(135deg, rgba(255,251,230,.5), rgba(64,82,104,.55)), ${relief}`,
         'slope': diagonal(gradient(DERIVED.slope[theme], DERIVED.slope.max)),
@@ -204,6 +212,10 @@ function swatch(name, theme) {
 const ABOUT = {
     'hillshade': 'Shading as if the sun stood in the north-west, so ridges, valleys and terraces stand out. ' +
         'It shows the shape of the land, not its height.',
+    'swiss': 'Shaded relief in the Swiss tradition of Eduard Imhof. A plain hillshade treats every 8 m bump alike, ' +
+        'which turns a steep hillside into noise; this shades three widths of landform and leans on the broadest, so ' +
+        'ridges and valleys read as whole shapes. Crests are brightened, hollows deepened, and low ground fades into a ' +
+        'pale haze so the high country comes forward. Turn off "Colour by height" for grey relief alone.',
     'color-relief': 'Colour by height above sea level: green in the Terai, pale yellow in the hills, tan and brown in the ' +
         'mountains, grey and white above about 5,000 m. There is no shading, so heights are easy to compare.',
     'color-hillshade': 'Height colours with hillshade on top: the colour tells you how high the ground is, ' +
@@ -223,8 +235,8 @@ function legendHtml(name, theme) {
     const v = VIZ[name], about = `<p class="legend-about">${ABOUT[aboutKey(name)]}</p>`;
     const bar = (bg, ticks) => `<div class="legend-bar" style="background:${bg}"></div>` +
         `<div class="legend-ticks">${ticks.map(t => `<span>${t}</span>`).join('')}</div>`;
-    if (name === 'hillshade' && !colorOn) return about;
-    if (v.relief || name === 'hillshade') return bar(gradient(RELIEF, 8850), ['0', '2,000', '4,000', '6,000', '8,850 m']) + about;
+    if ((name === 'hillshade' || name === 'swiss') && !colorOn) return about;
+    if (v.relief || name === 'hillshade' || name === 'swiss') return bar(gradient(RELIEF, 8850), ['0', '2,000', '4,000', '6,000', '8,850 m']) + about;
     if (v.derived === 'aspect') {
         return `<div class="legend-wheel"><div class="wheel" style="background:${wheel(theme)}">` +
             '<span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span></div>' +
@@ -259,7 +271,7 @@ function showViz() {
         b.setAttribute('aria-checked', b.dataset.viz === viz);
         b.firstElementChild.style.background = swatch(b.dataset.viz === 'hillshade' && colorOn ? 'color-hillshade' : b.dataset.viz, theme);
     }
-    $('color-wrap').hidden = viz !== 'hillshade';
+    $('color-wrap').hidden = viz !== 'hillshade' && viz !== 'swiss';
     $('viz-color').checked = colorOn;
     $('legend').innerHTML = legendHtml(viz, theme);
     const url = new URL(location.href);
@@ -291,7 +303,7 @@ setYear(nowNpt.getUTCFullYear());
 $('sun-day').value = Math.floor((nowNpt - jan1) / 864e5);
 const dayLabel = day => new Date(jan1 + day * 864e5).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', timeZone: 'UTC'});
 const hhmm = h => `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-let shadowUrl = '';
+let shadowUrl = '', swissTiles = '';
 
 function sunNow() {
     const day = +$('sun-day').value, hour = parseFloat($('sun-hour').value);
@@ -328,7 +340,13 @@ function castShadows() {
             map.getSource('derive-shadow').setTiles([url]);
         }
     }
-    map.setLayoutProperty('shadow', 'visibility', on ? 'visible' : 'none');
+    map.setLayoutProperty('shadow', 'visibility', on && viz !== 'swiss' ? 'visible' : 'none');
+    // Swiss relief does its own shading, so it follows the light direction itself.
+    const swissUrl = `derive://swiss/{z}/{x}/{y}?az=${on ? Math.round(sun.azimuth) : 315}&alt=${on ? Math.round(sun.altitude) : 45}`;
+    if (swissUrl !== swissTiles) {
+        swissTiles = swissUrl;
+        map.getSource('derive-swiss').setTiles([swissUrl]);
+    }
     redrawDrape(map);
 }
 

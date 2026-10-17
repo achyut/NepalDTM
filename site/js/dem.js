@@ -244,6 +244,83 @@ function nearRay({H, G, top}, x, y, sx, sy, rise, steps, soft) {
 
 const SHADOW = [16, 26, 54], SHADOW_ALPHA = 0.5;
 
+// Swiss relief, after the hand-drawn tradition of Imhof and the four ideas behind Eduard
+// (https://dilpreet.co/projects/eduard): generalise the terrain, steer the light, use aerial perspective, and
+// let the big landforms carry the picture. A plain hillshade reads every 8 m bump at equal strength, which
+// turns a Himalayan hillside into noise; this shades three widths of landform and leans on the broadest.
+//
+//   generalisation   gradients measured over 1, 5 and 15 pixels, weighted 0.2 / 0.35 / 0.45 towards the broad
+//   large landforms  the broad gradient also lifts whole sunlit flanks and drops shaded ones
+//   ridge emphasis   height above the 15-pixel local mean brightens crests and deepens hollows
+//   aerial perspective  low ground loses contrast and cools towards a pale haze, so high ground comes forward
+//
+// Returned as a see-through overlay drawn over whatever colour layer is beneath, so the page's "colour by
+// height" choice decides between grey relief and hypsometric tints.
+const SWISS = {
+    weight: [0.27, 0.37, 0.36],        // weight on the 1, 5 and 15 pixel gradients
+    steps: [1, 5, 15],
+    shadow: [44, 56, 78], sun: [255, 253, 243], haze: [186, 201, 217],
+    ridge: 0.22,                       // crest brightening
+    shadowMax: 0.68, sunMax: 0.5,      // strongest shading either way
+    hazeLow: 600, hazeHigh: 4200, hazeMax: 0.1,   // aerial perspective, kept light
+};
+
+// Lambert shading of a gradient, as a 0..1 brightness with 0.5 as flat ground.
+function lambert(dzdx, dzdn, se, sn, su) {
+    const n = Math.hypot(dzdx, dzdn, 1);
+    return Math.max(0, (-dzdx * se - dzdn * sn + su) / n);
+}
+
+export async function renderSwiss(tileHeights, z, x, y, az, alt) {
+    if (!(await tileHeights(z, x, y))) return null;
+    const {H, G} = await grid3(tileHeights, z, x, y);
+    const px = pixelSize(z, y);
+    // A low sun flattens cartographic relief, so the style keeps a plate-like elevation while following the
+    // chosen direction. 315 degrees, the Swiss convention, is what the north-west light gives.
+    const a = az * Math.PI / 180, e = Math.max(35, alt) * Math.PI / 180;
+    const se = Math.sin(a) * Math.cos(e), sn = Math.cos(a) * Math.cos(e), su = Math.sin(e);
+    const flat = lambert(0, 0, se, sn, su);
+    const wide = SWISS.steps[2];
+    const out = new Uint8ClampedArray(N * N * 4);
+
+    for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+            const r = (N + j) * G + N + i;
+            let shade = 0;
+            for (let k = 0; k < 3; k++) {
+                const d = SWISS.steps[k], span = 2 * d * px;
+                const dzdx = (H[r + d] - H[r - d]) / span;
+                const dzdn = -(H[r + d * G] - H[r - d * G]) / span;  // grid rows run south
+                shade += SWISS.weight[k] * lambert(dzdx, dzdn, se, sn, su);
+            }
+            // Lambert leaves far more room below flat ground than above it, so stretch each side to -1..+1
+            // before shading; otherwise the shadows swamp the highlights.
+            let lit = shade >= flat ? (shade - flat) / (1 - flat) : (shade - flat) / flat;
+
+            // Height above the local mean: positive on a crest, negative in a hollow.
+            const mean = (H[r - wide] + H[r + wide] + H[r - wide * G] + H[r + wide * G]) / 4;
+            lit += SWISS.ridge * Math.max(-1, Math.min(1, (H[r] - mean) / (0.35 * wide * px)));
+            lit = Math.max(-1, Math.min(1, lit));
+
+            // Aerial perspective: the lowest ground loses a little contrast and takes on haze, so the high
+            // country comes forward. Imhof's version is subtle, and so is this.
+            const t = Math.max(0, Math.min(1, (H[r] - SWISS.hazeLow) / (SWISS.hazeHigh - SWISS.hazeLow)));
+            const haze = SWISS.hazeMax * (1 - t);
+            lit *= 1 - 0.2 * (1 - t);
+
+            const o = 4 * (j * N + i);
+            const [tint, strength] = lit < 0 ? [SWISS.shadow, SWISS.shadowMax * (-lit) ** 0.85]
+                                             : [SWISS.sun, SWISS.sunMax * lit ** 0.85];
+            // Blend the haze over the shading: both are see-through, so mix them by weight.
+            const total = strength + haze;
+            if (total <= 0) { out[o + 3] = 0; continue; }
+            for (let c = 0; c < 3; c++) out[o + c] = (tint[c] * strength + SWISS.haze[c] * haze) / total;
+            out[o + 3] = 255 * Math.min(0.8, total);
+        }
+    }
+    return out;
+}
+
 // Cast shadow for one tile as RGBA pixels, in two passes.
 // Far: two zooms coarser, over the coarse tile and its eight neighbours, so ridges up to one coarse tile away
 // (about 35 km at zoom 12) can shade it. Long shadows are smooth, so it is traced on every fourth coarse pixel
