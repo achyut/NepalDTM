@@ -37,8 +37,8 @@ from pyproj import Transformer
 from rasterio.windows import Window
 from scipy import ndimage
 from scipy.spatial import cKDTree
+import shapely
 from shapely.geometry import Point, shape
-from shapely.ops import transform as reproject
 from shapely.prepared import prep
 from skimage.morphology import h_maxima
 
@@ -52,7 +52,8 @@ BLOCK = 12  # 8 m cells per side of a grid cell: 96 m
 TILE = 3000  # cells per side of a 24 km tile
 PROMINENCE = [100, 200, 300, 500, 1000, 1500, 2000]
 NAME_RADIUS = 300  # m
-QUERY = '[out:json][timeout:120];area["ISO3166-1"="NP"][admin_level=2]->.np;node["natural"="peak"]["name"](area.np);out body;'
+# Named peaks in a box around Nepal, so border peaks mapped just across the line (Kangchenjunga) still match.
+QUERY = '[out:json][timeout:120];node["natural"="peak"]["name"](26.2,79.9,30.6,88.4);out body;'
 
 
 def coarse_max(src):
@@ -118,7 +119,8 @@ def main() -> None:
         # Place each on the highest 8 m cell of its 96 m block and the eight around it.
         to_ll = Transformer.from_crs(src.crs, "EPSG:4326", always_xy=True).transform
         to_utm = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True).transform
-        nepal = prep(reproject(to_utm, shape(json.load(open(NEPAL))["features"][0]["geometry"])).buffer(BORDER))
+        outline = shape(json.loads(NEPAL.read_text())["features"][0]["geometry"])
+        nepal = prep(shapely.transform(outline, lambda c: np.column_stack(to_utm(c[:, 0], c[:, 1]))).buffer(BORDER))
         summits = []
         for (r, c), p in zip(peaks, prom):
             r0, c0 = max(0, (r - 1) * BLOCK), max(0, (c - 1) * BLOCK)
