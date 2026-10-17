@@ -106,8 +106,12 @@ Code is MIT. See `LICENSE`. The NepalDTM tiles are CC BY 4.0. Input datasets kee
 
 `code/data/control/survey/` holds Survey Department layers used as independent references (not inputs): the
 41 named peak heights and the 50 pass heights. The national contour lines
-(`geonode_eleva_ln.geojson`, 35,054 lines, 156 MB) are too large for this repository and are not in it; they
-come from the National Geoportal's WFS service as `geonode_eleva_ln`. Three checks read these layers:
+(`geonode_eleva_ln.geojson`, 35,054 lines, 156 MB) are too large for this repository and are not in it. They
+come from the National Geoportal's WFS service as `geonode_eleva_ln`; the copy that service returns is
+truncated mid-file, so a repaired copy (all but the last line recovered) is kept in the private
+`nepalgeoportal` R2 bucket at `wfs-downloads/geonode_eleva_ln.repaired.geojson`. That bucket is not public:
+the Survey Department layers are licensed data, so they are referenced here, not redistributed.
+Three checks read these layers:
 
 | Script | Writes | What it measures |
 |---|---|---|
