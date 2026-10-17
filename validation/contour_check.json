@@ -1,0 +1,115 @@
+{
+ "description": "Model height minus the Survey Department contour height at every 8th contour vertex inside Nepal, on the points where both models have a value. Metres; negative = model lower. Contours are map products with their own error (about +-10-20 m in the mountains) and a few hundred lines are mislabelled, so read the median and NMAD, and read this as NepalDTM against Copernicus rather than as an absolute accuracy. The ICESat-2 block holdout in validation_report.json is the headline.",
+ "generated": "2026-10-17",
+ "source": "Survey Department of Nepal, national contour lines (geonode_eleva_ln)",
+ "all": {
+  "nepaldtm": {
+   "n": 776216,
+   "median": -2.7,
+   "nmad": 14.58,
+   "share_beyond_50m": 0.0728,
+   "mean": -2.58,
+   "rmse": 49.77
+  },
+  "copernicus": {
+   "n": 776216,
+   "median": 4.39,
+   "nmad": 17.45,
+   "share_beyond_50m": 0.0863,
+   "mean": 4.72,
+   "rmse": 51.34
+  }
+ },
+ "by_elevation": {
+  "terai <300 m": {
+   "nepaldtm": {
+    "n": 6443,
+    "median": 0.13,
+    "nmad": 5.0,
+    "share_beyond_50m": 0.0028,
+    "mean": 4.3,
+    "rmse": 119.53
+   },
+   "copernicus": {
+    "n": 6443,
+    "median": 8.71,
+    "nmad": 9.7,
+    "share_beyond_50m": 0.0037,
+    "mean": 13.73,
+    "rmse": 119.38
+   }
+  },
+  "siwalik 300-1000 m": {
+   "nepaldtm": {
+    "n": 84959,
+    "median": -2.24,
+    "nmad": 8.68,
+    "share_beyond_50m": 0.0025,
+    "mean": -0.57,
+    "rmse": 80.43
+   },
+   "copernicus": {
+    "n": 84959,
+    "median": 7.98,
+    "nmad": 11.1,
+    "share_beyond_50m": 0.0074,
+    "mean": 10.44,
+    "rmse": 81.05
+   }
+  },
+  "hills 1-2.5 km": {
+   "nepaldtm": {
+    "n": 219399,
+    "median": -1.5,
+    "nmad": 9.68,
+    "share_beyond_50m": 0.0101,
+    "mean": -0.69,
+    "rmse": 17.78
+   },
+   "copernicus": {
+    "n": 219399,
+    "median": 6.7,
+    "nmad": 12.35,
+    "share_beyond_50m": 0.0176,
+    "mean": 8.32,
+    "rmse": 21.12
+   }
+  },
+  "mountains 2.5-4 km": {
+   "nepaldtm": {
+    "n": 181595,
+    "median": -1.79,
+    "nmad": 20.8,
+    "share_beyond_50m": 0.0955,
+    "mean": 2.39,
+    "rmse": 40.94
+   },
+   "copernicus": {
+    "n": 181595,
+    "median": 7.03,
+    "nmad": 22.65,
+    "share_beyond_50m": 0.1194,
+    "mean": 11.78,
+    "rmse": 43.59
+   }
+  },
+  "high himal >4 km": {
+   "nepaldtm": {
+    "n": 283820,
+    "median": -5.75,
+    "nmad": 20.77,
+    "share_beyond_50m": 0.1294,
+    "mean": -7.98,
+    "rmse": 56.55
+   },
+   "copernicus": {
+    "n": 283820,
+    "median": -2.74,
+    "nmad": 22.65,
+    "share_beyond_50m": 0.1438,
+    "mean": -4.48,
+    "rmse": 57.96
+   }
+  }
+ }
+}

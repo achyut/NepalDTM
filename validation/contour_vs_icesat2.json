@@ -1,0 +1,77 @@
+{
+ "description": "Height minus the ICESat-2 ATL08 ground return, in metres, at every good-quality return within 12 m of a Survey Department contour vertex. The contour and NepalDTM are judged on the same ground, so the smaller spread is the more accurate source. Part of each spread is the horizontal offset between the return and the vertex, which costs more height the steeper the ground, so the gentlest slope band is the cleanest comparison. ICESat-2 ellipsoid heights are converted to EGM2008, the datum of the tiles and contours.",
+ "generated": "2026-10-17",
+ "radius_m": 12.0,
+ "all": {
+  "contour": {
+   "n": 60183,
+   "median": 3.17,
+   "nmad": 13.03,
+   "rmse": 17.94
+  },
+  "nepaldtm": {
+   "n": 60183,
+   "median": -0.37,
+   "nmad": 5.32,
+   "rmse": 17.59
+  }
+ },
+ "by_slope": {
+  "slope <5 deg": {
+   "contour": {
+    "n": 7283,
+    "median": 2.92,
+    "nmad": 10.15,
+    "rmse": 15.56
+   },
+   "nepaldtm": {
+    "n": 7283,
+    "median": -0.06,
+    "nmad": 4.01,
+    "rmse": 13.35
+   }
+  },
+  "slope 5-15 deg": {
+   "contour": {
+    "n": 14552,
+    "median": 3.22,
+    "nmad": 11.34,
+    "rmse": 16.31
+   },
+   "nepaldtm": {
+    "n": 14552,
+    "median": -0.18,
+    "nmad": 4.47,
+    "rmse": 13.05
+   }
+  },
+  "slope 15-30 deg": {
+   "contour": {
+    "n": 22835,
+    "median": 3.07,
+    "nmad": 12.84,
+    "rmse": 16.96
+   },
+   "nepaldtm": {
+    "n": 22835,
+    "median": -0.29,
+    "nmad": 4.96,
+    "rmse": 13.91
+   }
+  },
+  "slope >=30 deg": {
+   "contour": {
+    "n": 15500,
+    "median": 3.47,
+    "nmad": 17.32,
+    "rmse": 21.52
+   },
+   "nepaldtm": {
+    "n": 15500,
+    "median": -1.25,
+    "nmad": 7.73,
+    "rmse": 25.91
+   }
+  }
+ }
+}

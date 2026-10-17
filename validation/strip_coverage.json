@@ -1,0 +1,21 @@
+{
+ "description": "Share of Nepal that the HMA 8 m strips could add on top of the 8 m mosaic, from granule footprints in NASA CMR. A footprint is where a strip exists, not where it has valid pixels: stereo matching fails on cloud, snow and deep shadow, so the usable gain is smaller than the figure here. In the Bhote Koshi trial 24 of 26 strips passed the 5 m NMAD match and coverage went from 80.2% to 84.9%.",
+ "generated": "2026-10-17",
+ "granules": {
+  "HMA_DEM8m_AT": 453,
+  "HMA_DEM8m_CT": 196
+ },
+ "mosaic_share": 0.4119,
+ "gap_share": 0.5881,
+ "strip_share_of_nepal": 0.5163,
+ "gap_covered_by_strips": 0.1896,
+ "share_after_strips": 0.5234,
+ "by_collection": {
+  "HMA_DEM8m_AT": {
+   "gap_covered": 0.1716
+  },
+  "HMA_DEM8m_CT": {
+   "gap_covered": 0.0312
+  }
+ }
+}

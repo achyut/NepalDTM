@@ -101,3 +101,26 @@ Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model
 ## License
 
 Code is MIT. See `LICENSE`. The NepalDTM tiles are CC BY 4.0. Input datasets keep their own licences.
+
+## Survey Department data
+
+`code/data/control/survey/` holds Survey Department layers used as independent references (not inputs): the
+41 named peak heights and the 50 pass heights. The national contour lines
+(`geonode_eleva_ln.geojson`, 35,054 lines, 156 MB) are too large for this repository and are not in it; they
+come from the National Geoportal's WFS service as `geonode_eleva_ln`. Three checks read these layers:
+
+| Script | Writes | What it measures |
+|---|---|---|
+| `scripts/contour_check.py` | `validation/contour_check.json` | NepalDTM and Copernicus against 776,216 national contour points |
+| `scripts/contour_vs_icesat2.py` | `validation/contour_vs_icesat2.json` | Which of the contours and NepalDTM is closer to the ICESat-2 laser ground |
+| `scripts/strip_coverage.py` | `validation/strip_coverage.json` | How much of the Copernicus-filled gap the free HMA 8 m strips could close |
+
+The contours are a check, not a correction. Judged against 60,183 ICESat-2 ground returns within 12 m of a
+contour vertex, the contours carry a +3.2 m bias and a 13.0 m spread (NMAD) against NepalDTM's −0.4 m and
+5.3 m; on gentle ground it is 10.2 m against 4.0 m. They are 1:50,000 map products at a 20 m interval, and a
+few hundred lines are mislabelled, so correcting the tiles towards them would make the tiles worse. On the
+contours themselves NepalDTM still beats Copernicus nationwide (median −2.7 m, NMAD 14.6 m against +4.4 m and
+17.4 m), which is an independent confirmation of the model.
+
+Heights in ICESat-2 ATL08 are above the WGS84 ellipsoid; the tiles and the contours are above the EGM2008
+geoid, which in Nepal sits 39 m (east) to 59 m (west) higher. Any comparison has to convert first.
