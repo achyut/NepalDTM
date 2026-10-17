@@ -11,6 +11,8 @@
 //   magma     perceptually uniform and warm, from the same family
 //   inferno   the same family again, pushed further towards fire
 //   terrain   the familiar school-atlas green to brown to white
+//   grey      no hue at all: the greyscale of a printed relief map, and what the others look like to a
+//             monochrome printer
 //
 // Only imhof is tuned for Nepal's heights; the others are even ramps and will put a colour boundary wherever
 // the numbers fall.
@@ -122,6 +124,27 @@ export const PALETTES = {
                     [42, '#d8893f'], [52, '#efac5e'], [60, '#ffe0a6']],
             roughness: [[0, '#16271c'], [4, '#23402b'], [9, '#355c3a'], [15, '#4e7d4b'], [22, '#73a166'],
                         [31, '#a3c58d'], [40, '#dcebc8']],
+        },
+    },
+    grey: {
+        label: 'Greyscale',
+        note: 'No hue at all, the way a relief map prints in black and white: value alone carries the number.',
+        light: {
+            elevation: ramp(H, ['#3f444c', '#4e545d', '#5f666f', '#737a84', '#8a919a',
+                                '#a2a9b2', '#bbc1c8', '#d3d8dd', '#e9ecef', '#ffffff']),
+            slope: [[0, '#f7f8fa'], [8, '#dcdfe4'], [16, '#bfc4cb'], [24, '#9ba1aa'], [32, '#767d87'],
+                    [42, '#545b65'], [52, '#363c45'], [60, '#1b1f26']],
+            roughness: [[0, '#f7f8fa'], [4, '#d8dce1'], [9, '#b4bac2'], [15, '#8d949d'], [22, '#676e78'],
+                        [31, '#434952'], [40, '#1b1f26']],
+        },
+        dark: {
+            // Lifted off black, which a dark page would swallow.
+            elevation: ramp(H, ['#3a3f47', '#4a4f58', '#5c626b', '#70767f', '#868c95',
+                                '#9ea4ad', '#b7bdc5', '#d0d5db', '#e8ebee', '#ffffff']),
+            slope: [[0, '#2b3038'], [8, '#3d434c'], [16, '#525862'], [24, '#6a7079'], [32, '#858b94'],
+                    [42, '#a3a9b1'], [52, '#c5cad0'], [60, '#f2f4f6']],
+            roughness: [[0, '#2b3038'], [4, '#3f444d'], [9, '#565c65'], [15, '#71777f'], [22, '#8f959d'],
+                        [31, '#b2b8bf'], [40, '#eef0f2']],
         },
     },
 };

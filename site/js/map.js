@@ -127,18 +127,21 @@ style.layers.push(
 // A degree grid, off until the button under the controls is pressed. One line every degree across the
 // frame, with its value repeated along it so a reading is never far from wherever you are looking.
 const GRID_INK = {light: ['#101d36', 'rgba(255,255,255,.85)'], dark: ['#c3cedf', 'rgba(10,21,40,.85)']};
+const round6 = v => Math.round(v * 1e6) / 1e6;
+
+// Lines are drawn in short hops rather than as two points, so they follow the ground in 3D.
+function hop(from, to, step = 0.1) {
+    const out = [];
+    for (let v = from; v < to; v += step) out.push(round6(v));
+    out.push(round6(to));
+    return out;
+}
+
 function graticule([[west, south], [east, north]], step = 1) {
-    const round = v => Math.round(v * 1e6) / 1e6;
+    const round = round6;
     const marks = (from, to) => {
         const out = [];
         for (let v = Math.ceil(from / step) * step; v <= to; v += step) out.push(round(v));
-        return out;
-    };
-    // Drawn in short hops rather than as two points, so the line follows the ground in 3D.
-    const hop = (from, to) => {
-        const out = [];
-        for (let v = from; v < to; v += 0.1) out.push(round(v));
-        out.push(round(to));
         return out;
     };
     const line = (coordinates, label) => ({type: 'Feature', properties: {label}, geometry: {type: 'LineString', coordinates}});
@@ -157,6 +160,23 @@ style.layers.push(
         'text-font': ['Noto Sans Medium'], 'text-size': 10.5, 'text-letter-spacing': 0.05, 'text-padding': 4},
      paint: {'text-color': GRID_INK[currentTheme()][0], 'text-halo-color': GRID_INK[currentTheme()][1],
              'text-halo-width': 1.2}},
+);
+
+// With the grid on, the pointer drags a meridian and a parallel of its own across the map, labelled with
+// where it is. The lines are geographic rather than drawn across the screen, so they stay true when the
+// map is turned or tilted.
+const NOTHING = {type: 'FeatureCollection', features: []};
+style.sources.crosshair = {type: 'geojson', data: NOTHING};
+style.layers.push(
+    {id: 'crosshair', type: 'line', source: 'crosshair', filter: ['==', ['geometry-type'], 'LineString'],
+     layout: {visibility: 'none'},
+     paint: {'line-color': GRID_INK[currentTheme()][0], 'line-opacity': 0.8, 'line-width': 1.1}},
+    {id: 'crosshair-label', type: 'symbol', source: 'crosshair', filter: ['==', ['geometry-type'], 'Point'],
+     layout: {visibility: 'none', 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Medium'],
+              'text-size': 11.5, 'text-anchor': 'top-left', 'text-offset': [0.7, 0.5],
+              'text-allow-overlap': true, 'text-ignore-placement': true},
+     paint: {'text-color': GRID_INK[currentTheme()][0], 'text-halo-color': GRID_INK[currentTheme()][1],
+             'text-halo-width': 1.4}},
 );
 
 for (const [layer, value] of Object.entries(vizLayers(viz))) {
@@ -224,10 +244,60 @@ const gridControl = new GridControl();
 map.addControl(gridControl, 'top-right');
 map.addControl(new maplibregl.ScaleControl({maxWidth: 120}), 'bottom-right');
 
+let gridOn = false;
+
 function showGrid(on) {
+    gridOn = on;
     gridControl.button.setAttribute('aria-pressed', String(on));
-    for (const id of ['grid', 'grid-label']) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    for (const id of ['grid', 'grid-label', 'crosshair', 'crosshair-label']) {
+        map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    }
+    if (!on) map.getSource('crosshair').setData(NOTHING);
+    restCursor();
 }
+
+// The pointer is a target while the grid is on and a crosshair while the profile tool is drawing a line;
+// over a summit it is a hand.
+function restCursor() {
+    map.getCanvas().style.cursor = profiling ? 'crosshair' : gridOn ? 'var(--cursor-target)' : '';
+}
+
+// One meridian and one parallel through the pointer, and its position written beside it. The redraw
+// waits for the next frame, so a fast drag across the map costs one update per frame rather than per
+// mouse event.
+const degrees = (v, pos, neg) => `${Math.abs(v).toFixed(4)}°${v < 0 ? neg : pos}`;
+let crosshairAt = null;
+let crosshairQueued = false;
+
+function drawCrosshair() {
+    crosshairQueued = false;
+    if (!gridOn || !crosshairAt) return;
+    const {lng, lat} = crosshairAt;
+    const [[west, south], [east, north]] = MAX_BOUNDS;
+    const lngText = degrees(lng, 'E', 'W');
+    const latText = degrees(lat, 'N', 'S');
+    map.getSource('crosshair').setData({type: 'FeatureCollection', features: [
+        {type: 'Feature', properties: {}, geometry: {type: 'LineString',
+         coordinates: hop(south, north).map(y => [round6(lng), y])}},
+        {type: 'Feature', properties: {}, geometry: {type: 'LineString',
+         coordinates: hop(west, east).map(x => [x, round6(lat)])}},
+        {type: 'Feature', properties: {label: `${latText}\n${lngText}`},
+         geometry: {type: 'Point', coordinates: [round6(lng), round6(lat)]}},
+    ]});
+}
+
+map.on('mousemove', e => {
+    if (!gridOn) return;
+    crosshairAt = e.lngLat;
+    if (crosshairQueued) return;
+    crosshairQueued = true;
+    requestAnimationFrame(drawCrosshair);
+});
+map.on('mouseout', () => {
+    if (!gridOn) return;
+    crosshairAt = null;
+    map.getSource('crosshair').setData(NOTHING);
+});
 
 // View and layer controls
 
@@ -236,12 +306,17 @@ function peakTheme(theme) {
     map.setPaintProperty('peaks-label', 'text-color', PEAK_TEXT[theme][0]);
     map.setPaintProperty('peaks-label', 'text-halo-color', PEAK_TEXT[theme][1]);
 }
-map.once('style.load', () => peakTheme(currentTheme()));
+map.once('style.load', () => {
+    peakTheme(currentTheme());
+    applyPalette();  // a scheme remembered from last time also decides how the hillshade is lit
+});
 function gridTheme(theme) {
     const [ink, halo] = GRID_INK[theme];
-    map.setPaintProperty('grid', 'line-color', ink);
-    map.setPaintProperty('grid-label', 'text-color', ink);
-    map.setPaintProperty('grid-label', 'text-halo-color', halo);
+    for (const id of ['grid', 'crosshair']) map.setPaintProperty(id, 'line-color', ink);
+    for (const id of ['grid-label', 'crosshair-label']) {
+        map.setPaintProperty(id, 'text-color', ink);
+        map.setPaintProperty(id, 'text-halo-color', halo);
+    }
 }
 initThemeToggle(theme => {
     peakTheme(theme);
@@ -252,9 +327,20 @@ initThemeToggle(theme => {
     showViz();
 });
 
+// The hillshade is warm by default, after the Swiss convention of a yellow sun on blue shadow. Under the
+// greyscale scheme that warmth is the only hue left on the map, so there it goes neutral too.
+const SHADE_COLOUR = {
+    tinted: ['rgb(64, 82, 104)', 'rgb(255, 249, 214)', 'rgb(88, 102, 118)'],
+    grey: ['rgb(72, 76, 82)', 'rgb(250, 250, 249)', 'rgb(98, 102, 108)'],
+};
+
 // Swap every ramp: the height colours are a paint property, the measures are baked into their tiles.
 function applyPalette() {
     const theme = currentTheme();
+    const [shadow, highlight, accent] = SHADE_COLOUR[palette === 'grey' ? 'grey' : 'tinted'];
+    map.setPaintProperty('hillshade', 'hillshade-shadow-color', shadow);
+    map.setPaintProperty('hillshade', 'hillshade-highlight-color', highlight);
+    map.setPaintProperty('hillshade', 'hillshade-accent-color', accent);
     map.setPaintProperty('relief', 'color-relief-color',
                          ['interpolate', ['linear'], ['elevation'], ...reliefStops(palette, theme).flat()]);
     for (const k of Object.keys(DERIVED)) {
@@ -707,7 +793,7 @@ $('peak-min').oninput = updatePeaks;
 $('peak-max').oninput = updatePeaks;
 map.once('style.load', updatePeaks);
 map.on('mouseenter', 'peaks-dot', () => { if (!profiling) map.getCanvas().style.cursor = 'pointer'; });
-map.on('mouseleave', 'peaks-dot', () => { if (!profiling) map.getCanvas().style.cursor = ''; });
+map.on('mouseleave', 'peaks-dot', () => { if (!profiling) restCursor(); });
 
 function flyTo(lng, lat, zoom, bearing, pitch) {
     stopSpin();
@@ -895,7 +981,7 @@ function setProfiling(on) {
     profiling = on;
     profileStart = null;
     $('tool-profile').setAttribute('aria-pressed', on);
-    map.getCanvas().style.cursor = on ? 'crosshair' : '';
+    restCursor();
     $('tool-hint').textContent = on ? 'Click the start point, then the end point. Esc cancels.'
                                     : 'Click anywhere in Nepal for the exact 8 m values at that spot.';
 }
