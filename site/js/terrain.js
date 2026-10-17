@@ -13,7 +13,10 @@ export const DATA_URL = 'https://nepaldtm-data.achyutpdl.com';
 export const TILE_URL = '/tiles/{z}/{x}/{y}.webp';
 export const tileUrl = (z, x, y) => `/tiles/${z}/${x}/${y}.webp`;
 export const NEPAL_BOUNDS = [[80.06, 26.35], [88.2, 30.45]];
-export const MAX_BOUNDS = [[77.0, 24.0], [91.3, 32.6]];
+// The frame the map may be panned and zoomed out to: Nepal's box plus 50 km of its neighbours north and
+// south, and 175 km east and west, which is what it takes for the whole country to fit beside the panel.
+// Beyond it there is nothing to show. scripts/neighbours.py prints this from the margins it clips to.
+export const MAX_BOUNDS = [[78.27, 25.90], [89.99, 30.93]];
 
 // Tiles are left out where there is no terrain (the worker answers 404), and MapLibre never finishes a
 // terrain tile that comes back empty, so those get a flat 0 m tile: the value the archive uses outside the
@@ -41,10 +44,15 @@ maplibregl.addProtocol('terrain', async (params, abort) => {
 export const reliefStops = (palette, theme) => stopsFor(palette, theme, 'elevation');
 
 // Surroundings: the page around the map, the colour hiding everything outside Nepal, and the border.
+// `land`/`edge` are the ground around Nepal and the lines between the countries on it: faint enough to
+// read as surroundings rather than as data, so Nepal no longer looks cut out of the page.
 export const THEMES = {
-    light: {outside: '#e3e9f2', border: '#003893', horizon: '#f4f7fb'},
-    dark: {outside: '#0a1528', border: '#b4bfd2', horizon: '#132442'},
-    blue: {outside: '#003893', border: '#b4bfd2', horizon: '#0a429d'},
+    light: {outside: '#e3e9f2', border: '#003893', horizon: '#f4f7fb', land: '#101d36', edge: '#101d36',
+            landOpacity: 0.05, edgeOpacity: 0.16},
+    dark: {outside: '#0a1528', border: '#b4bfd2', horizon: '#132442', land: '#8fa6c8', edge: '#8fa6c8',
+           landOpacity: 0.07, edgeOpacity: 0.2},
+    blue: {outside: '#003893', border: '#b4bfd2', horizon: '#0a429d', land: '#ffffff', edge: '#ffffff',
+           landOpacity: 0.06, edgeOpacity: 0.16},
 };
 
 const sky = ({outside, horizon}) => ({'sky-color': outside, 'horizon-color': horizon, 'fog-color': outside,
@@ -66,6 +74,13 @@ export function applyTheme(map, theme) {
     map.setPaintProperty('background', 'background-color', theme.outside);
     map.setPaintProperty('mask', 'fill-color', theme.outside);
     map.setPaintProperty('border', 'line-color', theme.border);
+    if (map.getLayer('neighbours')) {
+        map.setPaintProperty('neighbours', 'fill-color', theme.land);
+        map.setPaintProperty('neighbours', 'fill-opacity', theme.landOpacity);
+        map.setPaintProperty('neighbours-edge', 'line-color', theme.edge);
+        map.setPaintProperty('neighbours-edge', 'line-opacity', theme.edgeOpacity);
+    }
+    if (map.getLayer('neighbours-label')) map.setPaintProperty('neighbours-label', 'text-color', theme.edge);
     map.setSky(sky(theme));
     redrawDrape(map);
 }
@@ -74,6 +89,17 @@ export async function loadNepal() {
     const r = await fetch('/data/nepal.geojson');
     if (!r.ok) throw new Error(`boundary: HTTP ${r.status}`);
     return r.json();
+}
+
+// The surrounding land. It is decoration, so a map without it is still a map: on failure the frame is
+// simply empty, as it was before.
+export async function loadNeighbours() {
+    try {
+        const r = await fetch('/data/neighbours.geojson');
+        return r.ok ? await r.json() : null;
+    } catch {
+        return null;
+    }
 }
 
 function polygons(fc) {
@@ -107,7 +133,8 @@ export function inNepal(fc, lng, lat) {
     });
 }
 
-export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, palette = 'imhof', mode = 'light'} = {}) {
+export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, palette = 'imhof', mode = 'light',
+                                     neighbours = null} = {}) {
     const {outside, border} = theme;
     const dem = {type: 'raster-dem', tiles: [`terrain://${TILE_URL}`], tileSize: TILE_SIZE, encoding: 'terrarium',
                  minzoom: 5, maxzoom: TILE_MAX_ZOOM, bounds: [79.79, 26.08, 88.3, 30.81]};
@@ -119,6 +146,7 @@ export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, p
             relief: {...dem},
             nepal: {type: 'geojson', data: nepal},
             mask: {type: 'geojson', data: outsideMask(nepal)},
+            ...(neighbours ? {neighbours: {type: 'geojson', data: neighbours}} : {}),
         },
         layers: [
             {id: 'background', type: 'background', paint: {'background-color': outside}},
@@ -131,6 +159,13 @@ export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, p
                      'hillshade-accent-color': 'rgb(88, 102, 118)', 'hillshade-illumination-direction': 315,
                      'hillshade-illumination-anchor': 'map'}},
             {id: 'mask', type: 'fill', source: 'mask', paint: {'fill-color': outside}},
+            // Drawn over the mask, which has just painted everything outside Nepal flat.
+            ...(neighbours ? [
+                {id: 'neighbours', type: 'fill', source: 'neighbours', filter: ['==', ['get', 'kind'], 'land'],
+                 paint: {'fill-color': theme.land, 'fill-opacity': theme.landOpacity}},
+                {id: 'neighbours-edge', type: 'line', source: 'neighbours', filter: ['==', ['get', 'kind'], 'edge'],
+                 paint: {'line-color': theme.edge, 'line-opacity': theme.edgeOpacity, 'line-width': 1}},
+            ] : []),
             {id: 'border', type: 'line', source: 'nepal',
              paint: {'line-color': border, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.2, 12, 2.2]}},
         ],

@@ -1,4 +1,4 @@
-import {DATA_URL, MAX_BOUNDS, NEPAL_BOUNDS, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNepal,
+import {DATA_URL, MAX_BOUNDS, NEPAL_BOUNDS, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNeighbours, loadNepal,
     redrawDrape, reliefStops, terrainStyle} from './terrain.js';
 import {PALETTES, rememberPalette, stopsFor, storedPalette} from './palettes.js';
 import {DERIVED, SHADE_ALT, aspectColor, compass, derivedAt, derivedSource, horn, sunPosition} from './derive.js';
@@ -72,8 +72,8 @@ let fixedAz = 315;     // the Swiss convention, from the north-west
 
 let palette = storedPalette();
 
-const nepal = await loadNepal();
-const style = terrainStyle(nepal, {theme: THEMES[currentTheme()], palette, mode: currentTheme()});
+const [nepal, neighbours] = await Promise.all([loadNepal(), loadNeighbours()]);
+const style = terrainStyle(nepal, {theme: THEMES[currentTheme()], palette, mode: currentTheme(), neighbours});
 const SHADE = {
     full: style.layers.find(l => l.id === 'hillshade').paint['hillshade-exaggeration'],
     soft: ['interpolate', ['linear'], ['zoom'], 5, 0.4, 12, 0.3, 15, 0.2],
@@ -98,6 +98,13 @@ style.layers.splice(style.layers.findIndex(l => l.id === 'mask'), 0,
 // Summits found in NepalDTM (scripts/summits.py), loaded when first shown. Bigger dots stand out more
 // from their surroundings (higher prominence); names come from OpenStreetMap where a mapped peak is close.
 style.glyphs = 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf';
+// The neighbouring countries in the frame get their names, so the faint land around Nepal reads as
+// somewhere rather than as a smudge. Only this page has glyphs; the home page draws the land unlabelled.
+if (neighbours) style.layers.splice(style.layers.findIndex(l => l.id === 'border'), 0,
+    {id: 'neighbours-label', type: 'symbol', source: 'neighbours', filter: ['==', ['get', 'kind'], 'label'],
+     layout: {'text-field': ['upcase', ['get', 'name']], 'text-font': ['Noto Sans Medium'], 'text-size': 13,
+              'text-letter-spacing': 0.22},
+     paint: {'text-color': THEMES[currentTheme()].edge, 'text-opacity': 0.5}});
 style.sources.peaks = {type: 'geojson', data: {type: 'FeatureCollection', features: []},
     attribution: 'Peak names © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'};
 const NAME = ['coalesce', ['get', 'name'], ''];
@@ -117,6 +124,41 @@ style.layers.push(
      paint: {'text-color': '#101d36', 'text-halo-color': 'rgba(255,255,255,.92)', 'text-halo-width': 1.4}},
 );
 
+// A degree grid, off until the button under the controls is pressed. One line every degree across the
+// frame, with its value repeated along it so a reading is never far from wherever you are looking.
+const GRID_INK = {light: ['#101d36', 'rgba(255,255,255,.85)'], dark: ['#c3cedf', 'rgba(10,21,40,.85)']};
+function graticule([[west, south], [east, north]], step = 1) {
+    const round = v => Math.round(v * 1e6) / 1e6;
+    const marks = (from, to) => {
+        const out = [];
+        for (let v = Math.ceil(from / step) * step; v <= to; v += step) out.push(round(v));
+        return out;
+    };
+    // Drawn in short hops rather than as two points, so the line follows the ground in 3D.
+    const hop = (from, to) => {
+        const out = [];
+        for (let v = from; v < to; v += 0.1) out.push(round(v));
+        out.push(round(to));
+        return out;
+    };
+    const line = (coordinates, label) => ({type: 'Feature', properties: {label}, geometry: {type: 'LineString', coordinates}});
+    return {type: 'FeatureCollection', features: [
+        ...marks(west, east).map(lng => line(hop(south, north).map(lat => [lng, lat]), `${Math.abs(lng)}°${lng < 0 ? 'W' : 'E'}`)),
+        ...marks(south, north).map(lat => line(hop(west, east).map(lng => [lng, lat]), `${Math.abs(lat)}°${lat < 0 ? 'S' : 'N'}`)),
+    ]};
+}
+style.sources.grid = {type: 'geojson', data: graticule(MAX_BOUNDS)};
+style.layers.push(
+    {id: 'grid', type: 'line', source: 'grid', layout: {visibility: 'none'},
+     paint: {'line-color': GRID_INK[currentTheme()][0], 'line-opacity': 0.35, 'line-width': 0.8,
+             'line-dasharray': [2, 3]}},
+    {id: 'grid-label', type: 'symbol', source: 'grid', layout: {
+        visibility: 'none', 'symbol-placement': 'line', 'symbol-spacing': 280, 'text-field': ['get', 'label'],
+        'text-font': ['Noto Sans Medium'], 'text-size': 10.5, 'text-letter-spacing': 0.05, 'text-padding': 4},
+     paint: {'text-color': GRID_INK[currentTheme()][0], 'text-halo-color': GRID_INK[currentTheme()][1],
+             'text-halo-width': 1.2}},
+);
+
 for (const [layer, value] of Object.entries(vizLayers(viz))) {
     const l = style.layers.find(x => x.id === layer);
     l.layout = {...l.layout, visibility: value};
@@ -128,12 +170,22 @@ style.layers.push(
     {id: 'profile-line', type: 'line', source: 'profile', paint: {'line-color': '#dc143c', 'line-width': 2.5}},
 );
 
+// The panel and the controls sit over the canvas, so the whole country is framed into what is left of
+// it: otherwise the far west starts out behind the panel.
+const CHROME = innerWidth > 760
+    ? {top: 76, bottom: 48, left: 292, right: 70}   // panel on the left, map controls on the right
+    : {top: 64, bottom: 96, left: 16, right: 16};   // the panel is a sheet along the bottom
+// The padding goes into the camera, not onto the map: padding left on the map is also counted against
+// maxBounds, which would stop it zooming out far enough to show the country it has just been asked for.
+const allOfNepalCamera = () => map.cameraForBounds(NEPAL_BOUNDS, {padding: CHROME});
+// Read before the map opens: with hash: true it writes its own position there as soon as it has one.
+const SHARED_VIEW = location.hash;
+
 const map = new maplibregl.Map({
     container: 'map',
     style,
     bounds: NEPAL_BOUNDS,
-    fitBoundsOptions: {padding: 40},
-    pitch: location.hash ? 0 : 45,
+    pitch: SHARED_VIEW ? 0 : 45,
     maxBounds: MAX_BOUNDS,
     minZoom: 5.5,
     maxZoom: 18,
@@ -141,13 +193,41 @@ const map = new maplibregl.Map({
     hash: true,
     attributionControl: false,
 });
+// A link with a position in it says where to go; otherwise open on the whole country, clear of the panel.
+if (!SHARED_VIEW) map.jumpTo(allOfNepalCamera());
 map.addControl(new maplibregl.AttributionControl({
     compact: true,
     customAttribution: 'CC BY 4.0',
 }));
 map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), 'top-right');
 map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+// The grid button sits with the other map controls rather than in the panel, because it is about
+// reading the map rather than about what is on it.
+class GridControl {
+    onAdd() {
+        this.container = document.createElement('div');
+        this.container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+        this.container.innerHTML = `<button type="button" class="grid-btn" aria-pressed="false"
+            title="Coordinate grid" aria-label="Coordinate grid"><svg viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.6"><path d="M3 3h18v18H3z"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+            </svg></button>`;
+        this.button = this.container.firstElementChild;
+        this.button.onclick = () => showGrid(this.button.getAttribute('aria-pressed') === 'false');
+        return this.container;
+    }
+
+    onRemove() {
+        this.container.remove();
+    }
+}
+const gridControl = new GridControl();
+map.addControl(gridControl, 'top-right');
 map.addControl(new maplibregl.ScaleControl({maxWidth: 120}), 'bottom-right');
+
+function showGrid(on) {
+    gridControl.button.setAttribute('aria-pressed', String(on));
+    for (const id of ['grid', 'grid-label']) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+}
 
 // View and layer controls
 
@@ -157,8 +237,15 @@ function peakTheme(theme) {
     map.setPaintProperty('peaks-label', 'text-halo-color', PEAK_TEXT[theme][1]);
 }
 map.once('style.load', () => peakTheme(currentTheme()));
+function gridTheme(theme) {
+    const [ink, halo] = GRID_INK[theme];
+    map.setPaintProperty('grid', 'line-color', ink);
+    map.setPaintProperty('grid-label', 'text-color', ink);
+    map.setPaintProperty('grid-label', 'text-halo-color', halo);
+}
 initThemeToggle(theme => {
     peakTheme(theme);
+    gridTheme(theme);
     map.setPaintProperty('land', 'fill-color', LAND[theme]);
     applyPalette();
     applyTheme(map, THEMES[theme]);
@@ -631,7 +718,7 @@ function flyTo(lng, lat, zoom, bearing, pitch) {
 
 function allOfNepal() {
     stopSpin();
-    map.fitBounds(NEPAL_BOUNDS, {padding: 40, pitch: map.getTerrain() ? 45 : 0, bearing: 0, duration: 2500});
+    map.easeTo({...allOfNepalCamera(), pitch: map.getTerrain() ? 45 : 0, bearing: 0, duration: 2500});
     showPopup(null);
 }
 
