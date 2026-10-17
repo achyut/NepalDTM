@@ -1,42 +1,39 @@
 // Shared map setup for the home page and the viewer: the NepalDTM tiles, the colour ramp,
 // the mask that hides everything outside Nepal, and point elevation read from the tiles.
-// Expects the maplibregl and pmtiles globals from their script tags.
+// Expects the maplibregl global from its script tag.
 
 import {TILE_MAX_ZOOM, TILE_SIZE, heightSource, locate} from './dem.js';
 
 export {TILE_MAX_ZOOM}; // highest zoom in the archive, about 8.4 m per pixel over Nepal
 
 export const DATA_URL = 'https://nepaldtm-data.achyutpdl.com';
-export const PMTILES_URL = `${DATA_URL}/NepalDTM.webp.pmtiles`;
+// Tiles come from this site's own worker, which reads the archive in R2 and lets Cloudflare cache each tile
+// at the edge. Reading byte ranges from the 3 GB archive missed that cache on every single tile.
+export const TILE_URL = '/tiles/{z}/{x}/{y}.webp';
+export const tileUrl = (z, x, y) => `/tiles/${z}/${x}/${y}.webp`;
 export const NEPAL_BOUNDS = [[80.06, 26.35], [88.2, 30.45]];
 export const MAX_BOUNDS = [[77.0, 24.0], [91.3, 32.6]];
 
-const protocol = new pmtiles.Protocol({metadata: true});
-export const archive = new pmtiles.PMTiles(PMTILES_URL);
-protocol.add(archive);
-
-// The archive leaves out tiles with no data (India and Tibet inside its bounding box). MapLibre never
-// finishes loading a terrain tile that comes back empty, so answer those with a flat 0 m tile, the
-// same value the archive uses outside the 24 km grid. Terrarium 0 m is rgb(128, 0, 0).
+// Tiles are left out where there is no terrain (the worker answers 404), and MapLibre never finishes a
+// terrain tile that comes back empty, so those get a flat 0 m tile: the value the archive uses outside the
+// 24 km grid. Terrarium 0 m is rgb(128, 0, 0).
 let flatTile;
 function flat() {
     flatTile ??= (async () => {
-        const c = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(256, 256)
-            : Object.assign(document.createElement('canvas'), {width: 256, height: 256});
+        const c = new OffscreenCanvas(TILE_SIZE, TILE_SIZE);
         const ctx = c.getContext('2d');
         ctx.fillStyle = 'rgb(128, 0, 0)';
-        ctx.fillRect(0, 0, 256, 256);
-        const blob = c.convertToBlob ? await c.convertToBlob({type: 'image/png'})
-            : await new Promise(res => c.toBlob(res, 'image/png'));
-        return new Uint8Array(await blob.arrayBuffer());
+        ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+        return (await c.convertToBlob({type: 'image/png'})).arrayBuffer();
     })();
     return flatTile;
 }
 
-maplibregl.addProtocol('pmtiles', async (params, abort) => {
-    const r = await protocol.tile(params, abort);
-    if (params.type === 'arrayBuffer' && !r?.data?.byteLength) return {data: await flat()};
-    return r;
+maplibregl.addProtocol('terrain', async (params, abort) => {
+    const r = await fetch(params.url.replace(/^terrain:\/\//, ''), {signal: abort.signal});
+    if (r.status === 404) return {data: await flat()};
+    if (!r.ok) throw new Error(`tile ${r.status}`);
+    return {data: await r.arrayBuffer()};
 });
 
 // Light Swiss-style hypsometric tints, after the sodc-proposal basemap: the hillshade carries the form.
@@ -114,7 +111,8 @@ export function inNepal(fc, lng, lat) {
 
 export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light} = {}) {
     const {outside, border} = theme;
-    const dem = {type: 'raster-dem', url: `pmtiles://${PMTILES_URL}`, tileSize: 256, encoding: 'terrarium'};
+    const dem = {type: 'raster-dem', tiles: [`terrain://${TILE_URL}`], tileSize: TILE_SIZE, encoding: 'terrarium',
+                 minzoom: 5, maxzoom: TILE_MAX_ZOOM, bounds: [79.79, 26.08, 88.3, 30.81]};
     return {
         version: 8,
         transition: {duration: 0, delay: 0},
@@ -144,7 +142,7 @@ export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light} =
 }
 
 // Decoded heights, shared by the hover readout, the profile tool and slope/aspect/roughness under the cursor.
-export const tileHeights = heightSource(archive);
+export const tileHeights = heightSource(tileUrl);
 
 export async function elevationAt(lng, lat, zoom = TILE_MAX_ZOOM) {
     const {z, x, y, px, py} = locate(lng, lat, zoom);

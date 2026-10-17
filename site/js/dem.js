@@ -13,16 +13,17 @@ export const TILE_MAX_ZOOM = 14;
 const N = TILE_SIZE;
 
 // Heights from the Terrarium tiles: height = R * 256 + G + B / 256 - 32768. Each tile decodes to 256 x 256
-// heights, row by row from the north-west corner, or null where the archive has none.
-export function heightSource(archive, keep = 400) {
+// heights, row by row from the north-west corner, or null where there is no terrain.
+// `tileUrl(z, x, y)` gives the address; the worker answers 404 where the archive has no tile.
+export function heightSource(tileUrl, keep = 400) {
     const cache = new Map();
     return function tileHeights(z, x, y) {
         const key = `${z}/${x}/${y}`;
         if (!cache.has(key)) {
             if (cache.size > keep) cache.delete(cache.keys().next().value);
-            cache.set(key, archive.getZxy(z, x, y).then(async r => {
-                if (!r) return null;
-                const bmp = await createImageBitmap(new Blob([r.data]), {premultiplyAlpha: 'none', colorSpaceConversion: 'none'});
+            cache.set(key, fetch(tileUrl(z, x, y)).then(async r => {
+                if (!r.ok) return null;
+                const bmp = await createImageBitmap(await r.blob(), {premultiplyAlpha: 'none', colorSpaceConversion: 'none'});
                 const ctx = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', {willReadFrequently: true});
                 ctx.drawImage(bmp, 0, 0);
                 const d = ctx.getImageData(0, 0, bmp.width, bmp.height).data;

@@ -1,17 +1,27 @@
 {
-  "$schema": "https://unpkg.com/wrangler@4.98.0/config-schema.json",
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "nepaldtm",
   "compatibility_date": "2026-06-10",
+  "main": "worker/index.js",
   // Static site from site/, built into dist/ with the numbers filled in from validation/.
-  // The terrain data itself is served from the nepal-dem-8m R2 bucket at nepaldtm-data.achyutpdl.com.
+  // The worker serves the terrain tiles at /tiles/{z}/{x}/{y}.webp out of the archive in R2, so each tile
+  // is cacheable at the edge; everything else is a static asset.
   "build": {
     "command": "node scripts/build.mjs",
     "watch_dir": ["site", "scripts", "validation"]
   },
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
+  },
+  "r2_buckets": [
+    { "binding": "TILES", "bucket_name": "nepal-dem-8m", "remote": true }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
   },
   "routes": [
     { "pattern": "nepaldtm.achyutpdl.com", "custom_domain": true }

@@ -1,14 +1,14 @@
 // Tile worker: computes slope, aspect, roughness and shadow tiles off the main thread, so the map stays smooth.
 // Each worker reads the terrain archive itself and keeps its own cache of decoded heights.
 
-import {PMTiles} from 'https://cdn.jsdelivr.net/npm/pmtiles@4.4.0/+esm';
 import {TILE_SIZE, heightSource, renderDerived, renderShadow, renderSwiss} from './dem.js';
 
 let tileHeights;
 
 self.onmessage = async ({data: m}) => {
     if (m.type === 'init') {
-        tileHeights = heightSource(new PMTiles(m.url), 500);
+        // The worker fetches the same cached tile URLs as the page, so the browser cache is shared.
+        tileHeights = heightSource((z, x, y) => `${m.origin}/tiles/${z}/${x}/${y}.webp`, 500);
         return;
     }
     try {

@@ -18,3 +18,4 @@ dist/
 .wrangler/
 node_modules/
 code/data/control/survey/geonode_eleva_ln.geojson
+node_modules/
