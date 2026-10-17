@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/wrangler@4.98.0/config-schema.json",
+  "name": "nepaldtm",
+  "compatibility_date": "2026-06-10",
+  // Static site from site/, built into dist/ with the numbers filled in from validation/.
+  // The terrain data itself is served from the nepal-dem-8m R2 bucket at nepaldtm-data.achyutpdl.com.
+  "build": {
+    "command": "node scripts/build.mjs",
+    "watch_dir": ["site", "scripts", "validation"]
+  },
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    { "pattern": "nepaldtm.achyutpdl.com", "custom_domain": true }
+  ]
+}

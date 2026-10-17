@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": ["https://nepaldtm.achyutpdl.com", "http://localhost:8787", "http://127.0.0.1:8787"],
+        "methods": ["GET", "HEAD"],
+        "headers": ["range", "if-match", "if-none-match"]
+      },
+      "exposeHeaders": ["ETag", "Content-Range", "Content-Length", "Accept-Ranges"],
+      "maxAgeSeconds": 86400
+    }
+  ]
+}

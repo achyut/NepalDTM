@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>try{if(localStorage.getItem('nepaldtm-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NepalDTM Map</title>
+<meta name="description" content="Explore NepalDTM, the 8 m bare-earth terrain model of Nepal, in 2D and 3D. Read elevations, draw profiles, and download tiles.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/map.css">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pmtiles@4.4.0/dist/pmtiles.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.15.0/dist/proj4.js"></script>
+</head>
+<body class="viewer">
+<div id="map" aria-label="Map of Nepal terrain"></div>
+
+<header class="vbar">
+    <a class="brand" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2.5 18.5 9 7l3.6 5.6 2.6-3.6 6.3 9.5"/><path d="M6.4 11.6 9 13.4l2.2-1.5" stroke-width="1.3"/><path d="M2.5 20.5h19" stroke="#dc143c"/></svg>NepalDTM</a>
+    <div class="vbar-read" id="readout" aria-live="polite">Move over the map to read elevation</div>
+    <nav><a href="/#data">Data</a><a href="/#paper">Paper</a></nav>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode">
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+</header>
+
+<aside class="panel" id="panel">
+    <button class="sheet-handle" id="sheet-toggle" aria-expanded="true" aria-controls="panel-body">
+        <span></span><b>Layers &amp; tools</b>
+    </button>
+    <div class="panel-body" id="panel-body">
+        <section>
+            <h2>View</h2>
+            <div class="seg" role="group" aria-label="View mode">
+                <button id="mode-2d" aria-pressed="false">2D</button>
+                <button id="mode-3d" aria-pressed="true">3D</button>
+            </div>
+            <label class="range">Height exaggeration <output id="exag-val">1.5×</output>
+                <input autocomplete="off" type="range" id="exag" min="1" max="4" step="0.1" value="1.5">
+            </label>
+            <label class="range">Rotate <output id="bearing-val">0°</output>
+                <input autocomplete="off" type="range" id="bearing" min="-180" max="180" step="1" value="0">
+            </label>
+            <div class="rotate" role="group" aria-label="Rotate the map">
+                <button type="button" id="rot-left" aria-label="Rotate 90 degrees left">↺ 90°</button>
+                <button type="button" id="rot-right" aria-label="Rotate 90 degrees right">↻ 90°</button>
+                <button type="button" id="rot-north">North up</button>
+                <button type="button" id="rot-spin" aria-pressed="false">Spin</button>
+            </div>
+        </section>
+        <section>
+            <h2>Visualization</h2>
+            <div class="viz" id="viz" role="radiogroup" aria-label="Visualization type"></div>
+            <label class="check" id="color-wrap"><input autocomplete="off" type="checkbox" id="viz-color" checked> Colour by height</label>
+            <div class="legend" id="legend"></div>
+            <label class="check"><input autocomplete="off" type="checkbox" id="lyr-border" checked> National border</label>
+            <div class="sub">
+                <p class="sub-head">Light</p>
+                <div class="seg" role="group" aria-label="Light">
+                    <button type="button" id="light-nw" aria-pressed="true">North-west</button>
+                    <button type="button" id="light-sun" aria-pressed="false">Real sun</button>
+                </div>
+                <div class="sun-controls" id="sun-controls" hidden>
+                    <div class="year">Year <input autocomplete="off" type="number" id="sun-year" min="1900" max="2100" step="1" inputmode="numeric"></div>
+                    <label class="range">Date <output id="sun-date-val"></output>
+                        <input autocomplete="off" type="range" id="sun-day" min="0" max="364" step="1" value="0">
+                    </label>
+                    <label class="range">Time (Nepal) <output id="sun-time">12:00</output>
+                        <input autocomplete="off" type="range" id="sun-hour" min="0" max="24" step="0.25" value="12">
+                    </label>
+                    <p class="hint" id="sun-info"></p>
+                    <p class="legend-note">Shading follows the sun as you drag; shadows cast by ridges appear when you let go.</p>
+                </div>
+            </div>
+            <div class="sub">
+                <label class="check"><input autocomplete="off" type="checkbox" id="peaks-on" aria-controls="peak-controls"> Show peaks</label>
+                <div class="sub-body" id="peak-controls" hidden>
+                    <label class="range">Min height <output id="peak-min-val"></output>
+                        <input autocomplete="off" type="range" id="peak-min" min="0" max="8850" step="50" value="6000">
+                    </label>
+                    <label class="range">Max height <output id="peak-max-val"></output>
+                        <input autocomplete="off" type="range" id="peak-max" min="0" max="8850" step="50" value="8850">
+                    </label>
+                    <p class="hint" id="peak-count"></p>
+                </div>
+            </div>
+        </section>
+        <section>
+            <h2>Tools</h2>
+            <button class="tool" id="tool-profile" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 9 9l4 5 3-3 5 7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                Elevation profile
+            </button>
+            <p class="hint" id="tool-hint">Click anywhere in Nepal for the exact 8 m values at that spot.</p>
+        </section>
+        <section>
+            <h2>Go to</h2>
+            <div class="places" id="places"></div>
+        </section>
+        <p class="fine">Map tiles go to 8.4 m per pixel (zoom 14). Clicking reads the full-resolution 8 m files.
+            37% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.</p>
+    </div>
+</aside>
+
+<section class="inspect" id="inspect" hidden aria-live="polite">
+    <button class="close" id="inspect-close" aria-label="Close">×</button>
+    <div id="inspect-body"></div>
+</section>
+
+<section class="profile" id="profile" hidden>
+    <header>
+        <h2>Elevation profile</h2>
+        <div class="profile-stats" id="profile-stats"></div>
+        <button class="close" id="profile-close" aria-label="Close profile">×</button>
+    </header>
+    <div class="profile-chart" id="profile-chart"></div>
+</section>
+
+<script type="module" src="/js/map.js"></script>
+</body>
+</html>

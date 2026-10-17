@@ -231,9 +231,12 @@ It does not invent valley or ridge detail the base surface never contained.
 \section{How to obtain and rebuild it}
 
 The Cloud Optimized GeoTIFFs are at
-\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/cog/}.
-The browser map reads
-\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/NepalDTM.pmtiles}.
+\url{https://nepaldtm-data.achyutpdl.com/cog/}.
+The browser map at \url{https://nepaldtm.achyutpdl.com} reads
+\url{https://nepaldtm-data.achyutpdl.com/NepalDTM.webp.pmtiles}.
+That file holds the bare earth as Terrarium-encoded lossless WebP tiles from zoom 5 to zoom 14, about 8.4~m per pixel over Nepal, with heights rounded to 0.1~m.
+It is for viewing; use the GeoTIFFs for analysis.
+\texttt{code/nw\_tiles\_rgb.py} rebuilds it from the bare-earth mosaic.
 The repository is \url{https://github.com/achyut/NepalDTM}.
 
 \begin{verbatim}

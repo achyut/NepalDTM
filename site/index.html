@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>try{if(localStorage.getItem('nepaldtm-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NepalDTM</title>
+<meta name="description" content="NepalDTM is an open bare-earth elevation model of Nepal on an 8 m grid, built from satellite stereo, Copernicus GLO-30 and ICESat-2 and GEDI laser altimetry.">
+<meta property="og:title" content="NepalDTM: bare-earth terrain of Nepal">
+<meta property="og:description" content="Open 8 m-grid terrain model of Nepal. Held-out RMSE {{rmse}} m against ICESat-2, vs {{rmse_cop}} m for Copernicus GLO-30.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+<link rel="stylesheet" href="/css/site.css">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/pmtiles@4.4.0/dist/pmtiles.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+    <a class="brand" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2.5 18.5 9 7l3.6 5.6 2.6-3.6 6.3 9.5"/><path d="M6.4 11.6 9 13.4l2.2-1.5" stroke-width="1.3"/><path d="M2.5 20.5h19" stroke="#dc143c"/></svg>NepalDTM</a>
+    <nav>
+        <a href="#accuracy">Accuracy</a>
+        <a href="#data">Data</a>
+        <a href="#paper">Paper</a>
+        <a href="https://github.com/achyut/NepalDTM">GitHub</a>
+        <a class="cta" href="/map">Open map</a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode">
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    </nav>
+</header>
+
+<section class="hero">
+    <div id="hero-map" aria-hidden="true"></div>
+    <div class="hero-copy">
+        <div class="wrap">
+            <p class="eyebrow">Open data · CC BY 4.0</p>
+            <h1>The bare-earth terrain of Nepal</h1>
+            <hr class="rule">
+            <p class="lede">The height of the ground itself, with trees and buildings removed, on an 8 m grid for the whole country.
+                Built from satellite stereo imagery and {{n_points_m}} million laser measurements from space.</p>
+            <div class="actions">
+                <a class="btn primary" href="/map">Explore the map
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+                <a class="btn ghost" href="#data">Download data</a>
+                <a class="btn ghost" href="/paper/paper.pdf">Read the paper</a>
+            </div>
+        </div>
+    </div>
+    <p class="credit">Shaded relief: NepalDTM</p>
+</section>
+
+<section class="stats" aria-label="Key numbers">
+    <div class="wrap">
+        <div class="stat"><b>{{rmse}}<small>m</small></b><span>RMSE on {{n_heldout}} held-out ICESat-2 points</span></div>
+        <div class="stat"><b>{{rmse_gain}}<small>%</small></b><span>lower error than Copernicus GLO-30 ({{rmse_cop}} m)</span></div>
+        <div class="stat"><b>{{bias}}<small>m</small></b><span>bias, against {{bias_cop}} m for Copernicus</span></div>
+        <div class="stat"><b>{{km2}}<small>km²</small></b><span>covered in {{tiles}} tiles of 24 × 24 km</span></div>
+    </div>
+</section>
+
+<section class="block" id="about">
+    <div class="wrap two">
+        <div class="prose">
+            <p class="kicker">What it is</p>
+            <h2 class="title">Ground height, not treetop height</h2>
+            <p>Free global elevation models such as Copernicus GLO-30 measure the <strong>surface</strong>: the top of the forest canopy and
+                the roofs of buildings. In Nepal, where forests cover much of the hills and the Terai, that puts the "ground" metres too high.</p>
+            <p>NepalDTM estimates the <strong>bare earth</strong> underneath. Flood models, road and hydropower design, landslide studies,
+                and irrigation planning all need the ground, not the canopy.</p>
+            <p>Every tile comes with a surface model, a bare-earth model, and a per-pixel error estimate, so you can see how far to trust each value.</p>
+        </div>
+        <figure class="dsm-dtm" aria-label="Diagram comparing surface height and bare-earth height">
+            <svg viewBox="0 0 520 230" role="img">
+                <title>Surface model versus bare-earth model</title>
+                <path d="M0 190 C60 180 90 150 140 148 S220 170 260 160 S340 110 390 104 S470 130 520 120 V230 H0Z" style="fill:var(--line)"/>
+                <g style="fill:#8db27a">
+                    <ellipse cx="62" cy="152" rx="20" ry="30"/><ellipse cx="96" cy="140" rx="18" ry="28"/><ellipse cx="128" cy="126" rx="20" ry="30"/>
+                    <ellipse cx="160" cy="128" rx="18" ry="27"/><ellipse cx="370" cy="80" rx="18" ry="27"/><ellipse cx="402" cy="76" rx="19" ry="29"/>
+                    <ellipse cx="436" cy="88" rx="18" ry="26"/>
+                </g>
+                <g style="fill:var(--ink-3)"><rect x="236" y="128" width="26" height="34" rx="2"/><rect x="266" y="138" width="20" height="22" rx="2"/></g>
+                <path d="M0 160 C30 140 40 112 62 118 S90 104 100 108 S120 92 132 94 S170 92 176 120 C190 150 220 160 236 128 H286 C300 140 330 104 352 60 S390 44 402 46 S440 50 452 64 C470 90 500 112 520 112"
+                      fill="none" style="stroke:var(--crimson)" stroke-width="3" stroke-dasharray="7 5"/>
+                <path d="M0 190 C60 180 90 150 140 148 S220 170 260 160 S340 110 390 104 S470 130 520 120" fill="none" style="stroke:var(--blue)" stroke-width="3"/>
+            </svg>
+            <figcaption class="legend">
+                <span><i style="background:var(--crimson)"></i>Surface (DSM): what radar and stereo see</span>
+                <span><i style="background:var(--blue)"></i>Bare earth (DTM): NepalDTM</span>
+            </figcaption>
+        </figure>
+    </div>
+</section>
+
+<section class="block" id="method">
+    <div class="wrap">
+        <p class="kicker">How it is built</p>
+        <h2 class="title">Three satellite sources, one correction model</h2>
+        <p class="intro">The sharpest available surface is stitched together, then a model trained on laser ground returns predicts how much
+            vegetation and buildings add to it, and subtracts that.</p>
+        <div class="steps">
+            <div class="step">
+                <h3>Stitch the best surface</h3>
+                <p>The NASA High Mountain Asia 8 m stereo mosaic is used wherever it exists. Copernicus GLO-30 fills the gaps.</p>
+                <ul><li>HMA DEM 8 m · {{share_hma}}% of area</li><li>Copernicus GLO-30 · {{share_fill}}%</li></ul>
+            </div>
+            <div class="step">
+                <h3>Learn where the ground is</h3>
+                <p>Laser altimeters on ICESat-2 and GEDI see through gaps in the canopy to the ground. A model learns the canopy and building offset from them.</p>
+                <ul><li>{{n_icesat2}} ICESat-2 points</li><li>{{n_gedi}} GEDI points</li><li>canopy height · land cover</li></ul>
+            </div>
+            <div class="step">
+                <h3>Remove it and test honestly</h3>
+                <p>The offset is subtracted from the surface. Whole 48 km blocks were left out of training and used only for scoring.</p>
+                <ul><li>{{n_heldout}} held-out points</li><li>Khumbu differential GPS</li><li>Survey Department contours</li></ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="block" id="accuracy">
+    <div class="wrap">
+        <p class="kicker">Accuracy</p>
+        <h2 class="title">Lower error than Copernicus in every zone</h2>
+        <p class="intro">RMSE against ICESat-2 ground points from 48 km blocks that the model never saw. Lower is better.
+            The gain is largest in the Terai, where flood modelling needs it most.</p>
+        <div class="chart-legend"><span><i style="background:var(--blue)"></i>NepalDTM</span><span><i style="background:var(--band);box-shadow:inset 0 0 0 1px var(--line)"></i>Copernicus GLO-30</span></div>
+        {{accuracy_bars}}
+        <details class="full">
+            <summary>Full comparison with FABDEM and GEDTM30</summary>
+            {{accuracy_table}}
+            <p class="note">RMSE in metres on the {{n_common}} held-out points shared by all models (the national row is the {{n_heldout}} points inside Nepal).
+                GEDTM30 was trained on ICESat-2, so its score here is optimistic. Independent check: Khumbu differential GPS agrees with the surface model
+                to {{dgps}} m RMSE at glacier margins ({{n_dgps}} points).</p>
+        </details>
+    </div>
+</section>
+
+<section class="block" id="limits">
+    <div class="wrap">
+        <p class="kicker">Know the limits</p>
+        <h2 class="title">8 m grid, not 8 m detail everywhere</h2>
+        <p class="intro">The file spacing is 8 m across the whole country, but where the stereo mosaic has gaps the terrain detail comes from 30 m data.
+            The aux file in every tile says which source each pixel came from.</p>
+        <div class="limits">
+            <div class="limit"><b>{{rmse_hma}} m</b><p>RMSE where the 8 m stereo mosaic is the base, against {{rmse_fill}} m in Copernicus-filled areas.</p></div>
+            <div class="limit"><b>{{rmse_steep}} m</b><p>RMSE on slopes of 40° and steeper, where every model struggles.</p></div>
+            <div class="limit"><b>{{err_p50}} / {{err_p90}} m</b><p>Median and 90th-percentile expected error across the country, from the per-pixel error band.</p></div>
+        </div>
+        <div class="coverage" aria-label="Share of area by source">
+            <div class="coverage-bar">
+                <div class="hma" style="width:{{share_hma}}%">HMA 8 m · {{share_hma}}%</div>
+                <div class="fill" style="width:{{share_fill}}%">Copernicus 30 m fill · {{share_fill}}%</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="block" id="data">
+    <div class="wrap">
+        <p class="kicker">Data</p>
+        <h2 class="title">Download and use it</h2>
+        <p class="intro">Free to use with attribution under CC BY 4.0. Click any point on the <a href="/map">map</a> to get the tile that covers it.</p>
+        <div class="products">
+            <div class="product">
+                <h3>Cloud Optimized GeoTIFF tiles</h3>
+                <p>{{tiles}} tiles of 24 × 24 km, each as <code>_dtm</code> (bare earth), <code>_dem</code> (surface) and <code>_aux</code>
+                    (band 1 source: 1 = HMA 8 m, 2 = Copernicus fill; band 2 expected error in decimetres).</p>
+                <a class="btn line go" href="/map">Pick on map</a>
+            </div>
+            <div class="product">
+                <h3>Web map tiles (PMTiles)</h3>
+                <p>Bare earth as Terrarium-encoded terrain tiles (lossless WebP, heights to 0.1 m), zoom 5–14, for MapLibre and other web maps.</p>
+                <a class="btn line go" href="https://nepaldtm-data.achyutpdl.com/NepalDTM.webp.pmtiles">PMTiles · 3.0 GB</a>
+            </div>
+        </div>
+        <pre><button class="copy" data-copy>Copy</button><code># Read one tile straight from the web with GDAL, no download needed
+gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif
+
+# Or download it
+curl -O https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif</code></pre>
+        <dl class="specs">
+            <div><dt>Grid</dt><dd>8 m</dd></div>
+            <div><dt>Projection</dt><dd>UTM 45N · EPSG:32645</dd></div>
+            <div><dt>Heights</dt><dd>EGM2008 geoid</dd></div>
+            <div><dt>Licence</dt><dd>CC BY 4.0</dd></div>
+        </dl>
+    </div>
+</section>
+
+<section class="block" id="paper">
+    <div class="wrap paper-grid">
+        <div>
+            <p class="kicker">Paper</p>
+            <h2 class="title">Method and full validation</h2>
+            <a class="doc" href="/paper/paper.pdf">
+                <svg viewBox="0 0 34 40" aria-hidden="true"><path d="M2 2h20l10 10v26H2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 2v10h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <div><b>NepalDTM: A National 8-Metre Bare-Earth DTM of Nepal</b><span>Paper · PDF</span></div>
+            </a>
+            <a class="doc" href="/paper/whitepaper.pdf">
+                <svg viewBox="0 0 34 40" aria-hidden="true"><path d="M2 2h20l10 10v26H2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 2v10h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <div><b>Practical guide</b><span>Longer white paper · PDF</span></div>
+            </a>
+            <a class="doc" href="https://github.com/achyut/NepalDTM">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.2.8.8 1.2 1.9 1.2 3.1 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.1.9 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>
+                <div><b>Code on GitHub</b><span>Reproduce the full build · MIT</span></div>
+            </a>
+        </div>
+        <div>
+            <p class="kicker">Cite</p>
+            <pre><button class="copy" data-copy>Copy</button><code>@article{paudel2026nepaldtm,
+  author = {Paudel, Achyut},
+  title  = {{NepalDTM}: A National 8-Metre Bare-Earth
+            Digital Terrain Model of {Nepal} from
+            Multi-Source Satellite Data Fusion},
+  year   = {2026},
+  url    = {https://github.com/achyut/NepalDTM}
+}</code></pre>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <svg class="ridge" viewBox="0 940 1920 140" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,1080 0,1046 90,1030 170,1042 260,1022 330,1036 420,1012 500,1030 600,1018 690,1034 790,1010 880,1028 980,1016 1070,1032 1170,1008 1260,1026 1350,1004 1430,1022 1500,992 1560,1010 1620,972 1670,996 1720,978 1790,1008 1850,990 1920,1012 1920,1080" fill="#0A429D"/><polygon points="0,1080 0,1062 120,1050 240,1060 380,1044 520,1058 660,1046 800,1060 940,1048 1080,1060 1220,1046 1360,1058 1480,1040 1600,1054 1720,1036 1820,1050 1920,1040 1920,1080" fill="#134DA8"/><g fill="#2560BA" transform="translate(1700,1040) scale(1.4) translate(-1850,-1044)"><rect x="1822" y="1034" width="56" height="10"/><polygon points="1812,1034 1888,1034 1872,1022 1828,1022"/><rect x="1834" y="1014" width="32" height="8"/><polygon points="1822,1014 1878,1014 1864,1003 1836,1003"/><rect x="1840" y="996" width="20" height="7"/><polygon points="1830,996 1870,996 1858,986 1842,986"/><rect x="1848" y="978" width="4" height="8"/><polygon points="1846,978 1854,978 1850,970"/></g></svg>
+    <div class="wrap">
+        <div>
+            <h3>Data credits</h3>
+            <ul>
+                <li>Copernicus DEM: ESA, doi:10.5270/ESA-c5d3d65</li>
+                <li>ICESat-2 ATL08: Neuenschwander &amp; Pitts (2019)</li>
+                <li>GEDI L2A: Dubayah et al. (2020)</li>
+                <li>HMA DEM 8 m: Shean (2017), NSIDC</li>
+                <li>Canopy height: Tolan et al. (2024)</li>
+                <li>ESA WorldCover 2021: Zanaga et al. (2022)</li>
+                <li>EGM2008: Pavlis et al. (2012)</li>
+                <li>Khumbu dGPS: Quincey, King &amp; Watson (2016)</li>
+                <li>FABDEM V1-2: Hawker et al. (2022)</li>
+                <li>GEDTM30: Ho et al. (2025)</li>
+            </ul>
+        </div>
+        <div>
+            <h3>NepalDTM</h3>
+            <p>Achyut Paudel · <a href="mailto:achyut.pdl@gmail.com">achyut.pdl@gmail.com</a></p>
+            <p>Code MIT · Data CC BY 4.0<br>Input datasets keep their own licences.</p>
+        </div>
+    </div>
+</footer>
+
+<script type="module" src="/js/home.js"></script>
+</body>
+</html>

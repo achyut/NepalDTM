@@ -21,18 +21,25 @@ Below 300 m the spatial-holdout RMSE is 1.96 m, against 4.53 m for Copernicus. F
 
 ## View it
 
+The website and map viewer are at https://nepaldtm.achyutpdl.com. The map shows only Nepal, in 2D or 3D, as hillshade (optionally coloured by height), color relief, slope, aspect, or roughness. Slope, aspect, and roughness are computed in the browser from the map tiles, in background workers, so they depend on the zoom; zoom 14 (8.4 m pixels) is the finest. The light can come from a fixed north-west direction or from the real sun for a chosen date and Nepal time; with the real sun, the shading follows the time slider at once and the shadows cast by ridges fill in when the slider is let go. Show peaks marks summits found in NepalDTM between a minimum and a maximum height. Clicking a point reads the bare-earth, surface, slope, aspect, source, and expected-error values from the 8 m tiles, and the profile tool draws an elevation profile between two points.
+
+The summits file, `site/data/summits.geojson`, is built by `scripts/summits.py` from the 8 m bare-earth mosaic: every summit that rises at least 100 m above the col joining it to higher ground (its topographic prominence), with a prominence class and, where an OpenStreetMap peak lies within 300 m, its name and recorded height (© OpenStreetMap contributors, ODbL).
+
+The site is static HTML and JavaScript in [`site/`](site), served by a Cloudflare Worker. `scripts/build.mjs` copies it to `dist/` and fills every number on the home page from [`validation/validation_report.json`](validation/validation_report.json). To run it locally or deploy it, with [Wrangler](https://developers.cloudflare.com/workers/wrangler/) installed:
+
 ```bash
-python3 serve.py
+wrangler dev       # builds, then serves http://localhost:8787
+wrangler deploy    # builds and publishes to nepaldtm.achyutpdl.com
 ```
 
-Then open http://127.0.0.1:8000/
+The tiles are in the `nepal-dem-8m` R2 bucket, served at `nepaldtm-data.achyutpdl.com`. Its CORS rule is [`infra/r2-cors.json`](infra/r2-cors.json): `wrangler r2 bucket cors set nepal-dem-8m --file infra/r2-cors.json`.
 
 ## Data
 
 | Product | URL |
 |---|---|
-| Map (PMTiles) | https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/NepalDTM.pmtiles |
-| Cloud Optimized GeoTIFF tiles | https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/cog/ |
+| Map (PMTiles, zoom 5–14, lossless WebP, heights to 0.1 m, 3.0 GB) | https://nepaldtm-data.achyutpdl.com/NepalDTM.webp.pmtiles |
+| Cloud Optimized GeoTIFF tiles | `https://nepaldtm-data.achyutpdl.com/cog/{tile}_{dtm,dem,aux}.tif`, e.g. [`E0360N3072_dtm.tif`](https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif) |
 
 Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an error file. The code writes VRT mosaics that point at a local `out/` folder.
 
@@ -53,6 +60,7 @@ cd code
 | `python run.py fuse` | Train the bare-earth correction and write the tiles |
 | `python run.py validate` | Held-out scores, differential GPS, contours, and seams |
 | `python run.py all` | Every step |
+| `python nw_tiles_rgb.py` | Map tiles: `data/nw/NepalDTM.webp.pmtiles` from the bare-earth mosaic |
 
 A national run downloads tens of gigabytes. Cells and tiles already on disk are skipped. Put a NASA Earthdata token in `~/.earthdata_token`. That file is not part of this repository.
 
