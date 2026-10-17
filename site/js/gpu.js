@@ -9,6 +9,8 @@
 // underneath and the edge cache all work as before. dem.js stays as the fallback where WebGL2 is missing, and
 // it still answers the readout under the cursor, which needs exact numbers rather than pixels.
 
+import {SHADE_ALT} from './dem.js';
+
 const N = 256;
 const GRID = 3 * N; // the tile plus its eight neighbours
 
@@ -213,7 +215,8 @@ function draw(program, uniforms) {
 export function swissOnGpu(tiles, az, alt, px) {
     const {gl, programs} = gpu;
     upload(0, tiles);
-    const a = az * Math.PI / 180, e = Math.max(35, alt) * Math.PI / 180;
+    // The same cartographic sun height as the CPU path: a near-overhead sun leaves the relief no contrast.
+    const a = az * Math.PI / 180, e = Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], alt)) * Math.PI / 180;
     const su = Math.sin(e);
     return draw(programs.swiss, {
         grid: l => gl.uniform1i(l, 0),

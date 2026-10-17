@@ -260,6 +260,9 @@ function nearRay({H, G, top}, x, y, sx, sy, rise, steps, soft) {
     return shade;
 }
 
+// The sun height the shading is drawn with, whatever the real one is. See renderSwiss.
+export const SHADE_ALT = [35, 50];
+
 const SHADOW = [16, 26, 54], SHADOW_ALPHA = 0.5;
 
 // Swiss relief, after the hand-drawn tradition of Imhof and the four ideas behind Eduard
@@ -293,9 +296,10 @@ export async function renderSwiss(tileHeights, z, x, y, az, alt) {
     if (!(await tileHeights(z, x, y))) return null;
     const {H, G} = await grid3(tileHeights, z, x, y);
     const px = pixelSize(z, y);
-    // A low sun flattens cartographic relief, so the style keeps a plate-like elevation while following the
-    // chosen direction. 315 degrees, the Swiss convention, is what the north-west light gives.
-    const a = az * Math.PI / 180, e = Math.max(35, alt) * Math.PI / 180;
+    // The shading keeps a cartographic sun height and only follows the real direction. A high sun leaves no
+    // room: at 85 degrees nothing can be brighter than flat ground, because every slope tilts away from it,
+    // so a midday scene washes out. Imhof's relief is lit from about 45 degrees whatever the hour.
+    const a = az * Math.PI / 180, e = Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], alt)) * Math.PI / 180;
     const se = Math.sin(a) * Math.cos(e), sn = Math.cos(a) * Math.cos(e), su = Math.sin(e);
     const flat = lambert(0, 0, se, sn, su);
     const wide = SWISS.steps[2];

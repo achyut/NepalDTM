@@ -1,19 +1,55 @@
 import {DATA_URL, MAX_BOUNDS, NEPAL_BOUNDS, RELIEF, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNepal,
     redrawDrape, terrainStyle} from './terrain.js';
-import {DERIVED, aspectColor, compass, derivedAt, derivedSource, horn, sunPosition} from './derive.js';
+import {DERIVED, SHADE_ALT, aspectColor, compass, derivedAt, derivedSource, horn, sunPosition} from './derive.js';
 import {currentTheme, initThemeToggle} from './theme.js';
 
 const $ = id => document.getElementById(id);
 
+// Places worth flying to, by province, west to east. Each carries a camera: the mountains are worth seeing
+// from low down, the Terai from higher up. A peak on the border is viewed from a point inside Nepal looking
+// towards it, because the ground on the far side is not in the model and would leave half the screen empty.
 const PLACES = {
-    'All of Nepal': null,
-    'Everest': {center: [86.925, 27.988], zoom: 12.2, bearing: -25, pitch: 70},
-    'Annapurna': {center: [83.82, 28.596], zoom: 11.2, bearing: 10, pitch: 68},
-    'Kathmandu Valley': {center: [85.32, 27.7], zoom: 10.8, bearing: -10, pitch: 55},
-    'Pokhara': {center: [83.98, 28.23], zoom: 11, bearing: 0, pitch: 62},
-    'Langtang': {center: [85.55, 28.21], zoom: 11.3, bearing: 20, pitch: 68},
-    'Rara Lake': {center: [82.09, 29.53], zoom: 12, bearing: 0, pitch: 60},
-    'Chitwan (Terai)': {center: [84.4, 27.58], zoom: 10.5, bearing: 0, pitch: 45},
+    Sudurpashchim: [
+        ['Api Himal', 80.92, 29.94, 11.5, 10, 70],
+        ['Khaptad', 81.12, 29.36, 11, 0, 55],
+        ['Bheemdatt', 80.18, 28.97, 11.5, 0, 45],
+        ['Dhangadhi', 80.58, 28.70, 11, 0, 40],
+    ],
+    Karnali: [
+        ['Rara Lake', 82.09, 29.53, 12, 0, 60],
+        ['Shey Phoksundo', 82.95, 29.19, 11.5, -20, 68],
+        ['Jumla', 82.18, 29.27, 11, 0, 55],
+        ['Dolpa', 82.82, 28.98, 10.8, 0, 60],
+    ],
+    Lumbini: [
+        ['Lumbini', 83.28, 27.48, 12, 0, 35],
+        ['Palpa (Tansen)', 83.55, 27.87, 11.5, 0, 55],
+        ['Butwal', 83.46, 27.70, 11.5, 0, 45],
+    ],
+    Gandaki: [
+        ['Annapurna', 83.82, 28.596, 11.2, 10, 68],
+        ['Pokhara', 83.98, 28.23, 11, 0, 62],
+        ['Manaslu', 84.56, 28.55, 11.3, -15, 70],
+        ['Upper Mustang', 83.87, 29.10, 10.8, 0, 60],
+        ['Muktinath', 83.87, 28.82, 11.5, 15, 65],
+    ],
+    Bagmati: [
+        ['Kathmandu Valley', 85.32, 27.70, 10.8, -10, 55],
+        ['Langtang', 85.55, 28.21, 11.3, 20, 68],
+        ['Gosaikunda', 85.42, 28.08, 12, 0, 62],
+        ['Chitwan', 84.40, 27.58, 10.5, 0, 45],
+    ],
+    Madhesh: [
+        ['Janakpur', 85.92, 26.73, 11.5, 0, 35],
+        ['Birgunj', 84.88, 27.01, 11.5, 0, 35],
+    ],
+    Koshi: [
+        ['Everest', 86.88, 27.94, 11.8, 30, 70],
+        ['Kanchenjunga', 88.07, 27.65, 11.3, 40, 68],
+        ['Makalu', 87.05, 27.84, 11.3, 35, 70],
+        ['Ilam', 87.93, 26.91, 11.5, 0, 50],
+        ['Dharan', 87.28, 26.81, 11.5, 0, 40],
+    ],
 };
 
 // Visualization types. Hillshade can be coloured by height. Slope, aspect and roughness are computed from the
@@ -198,7 +234,7 @@ for (const ev of ['mousedown', 'touchstart', 'wheel']) map.getCanvas().addEventL
 
 // The View and Light popups. Each control lives in one place only, so there is nothing to keep in step, and
 // opening one closes the other.
-const POPUPS = {view: 'view-popup', sun: 'sun-popup'};
+const POPUPS = {view: 'view-popup', sun: 'sun-popup', places: 'places-popup'};
 
 function showPopup(which) {
     for (const [name, id] of Object.entries(POPUPS)) {
@@ -365,7 +401,10 @@ function lightShading() {
     const day = sun && sun.altitude > 0;
     map.setPaintProperty('hillshade', 'hillshade-method', day ? 'basic' : 'standard');
     map.setPaintProperty('hillshade', 'hillshade-illumination-direction', day ? sun.azimuth : fixedAz);
-    map.setPaintProperty('hillshade', 'hillshade-illumination-altitude', day ? Math.max(2, sun.altitude) : 45);
+    // Capped, for the reason in dem.js: a high sun leaves the relief no contrast and noon washes out. The
+    // cast shadows still use the true height, because shadows really do shorten towards midday.
+    map.setPaintProperty('hillshade', 'hillshade-illumination-altitude',
+                         day ? Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], sun.altitude)) : 45);
     map.setLayoutProperty('night', 'visibility', sun && !day ? 'visible' : 'none');
     return sun;
 }
@@ -526,16 +565,41 @@ map.once('style.load', updatePeaks);
 map.on('mouseenter', 'peaks-dot', () => { if (!profiling) map.getCanvas().style.cursor = 'pointer'; });
 map.on('mouseleave', 'peaks-dot', () => { if (!profiling) map.getCanvas().style.cursor = ''; });
 
-for (const [name, view] of Object.entries(PLACES)) {
-    const b = document.createElement('button');
-    b.textContent = name;
-    b.onclick = () => {
-        stopSpin();
-        if (view) map.flyTo({...view, duration: 3000, essential: true});
-        else map.fitBounds(NEPAL_BOUNDS, {padding: 40, pitch: map.getTerrain() ? 45 : 0, bearing: 0, duration: 2500});
-        if (matchMedia('(max-width: 760px)').matches) toggleSheet(false);
-    };
-    $('places').append(b);
+function flyTo(lng, lat, zoom, bearing, pitch) {
+    stopSpin();
+    if (pitch > 0 && !map.getTerrain()) setMode(true, false);
+    map.flyTo({center: [lng, lat], zoom, bearing, pitch, duration: 3000, essential: true});
+    showPopup(null);
+}
+
+function allOfNepal() {
+    stopSpin();
+    map.fitBounds(NEPAL_BOUNDS, {padding: 40, pitch: map.getTerrain() ? 45 : 0, bearing: 0, duration: 2500});
+    showPopup(null);
+}
+
+{
+    const list = $('places');
+    const whole = document.createElement('button');
+    whole.className = 'place-all';
+    whole.textContent = 'All of Nepal';
+    whole.onclick = allOfNepal;
+    list.append(whole);
+    for (const [province, places] of Object.entries(PLACES)) {
+        const head = document.createElement('p');
+        head.className = 'place-head';
+        head.textContent = province;
+        list.append(head);
+        const row = document.createElement('div');
+        row.className = 'place-row';
+        for (const [name, ...view] of places) {
+            const b = document.createElement('button');
+            b.textContent = name;
+            b.onclick = () => flyTo(...view);
+            row.append(b);
+        }
+        list.append(row);
+    }
 }
 
 function toggleSheet(open) {
