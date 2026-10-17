@@ -201,11 +201,15 @@ const allOfNepalCamera = () => map.cameraForBounds(NEPAL_BOUNDS, {padding: CHROM
 // Read before the map opens: with hash: true it writes its own position there as soon as it has one.
 const SHARED_VIEW = location.hash;
 
+// The viewer opens flat. The terrain is still in the style's sources, so the 3D button, the tilt slider
+// and a shared link that was tilted can all put it back under the map.
+delete style.terrain;
+
 const map = new maplibregl.Map({
     container: 'map',
     style,
     bounds: NEPAL_BOUNDS,
-    pitch: SHARED_VIEW ? 0 : 45,
+    pitch: 0,
     maxBounds: MAX_BOUNDS,
     minZoom: 5.5,
     maxZoom: 18,
@@ -309,6 +313,7 @@ function peakTheme(theme) {
 map.once('style.load', () => {
     peakTheme(currentTheme());
     applyPalette();  // a scheme remembered from last time also decides how the hillshade is lit
+    if (map.getPitch() > 0) setMode(true, false);  // a link shared from a tilted view comes back tilted
 });
 function gridTheme(theme) {
     const [ink, halo] = GRID_INK[theme];
