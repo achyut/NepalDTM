@@ -57,6 +57,10 @@ style.glyphs = 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{r
 style.sources.peaks = {type: 'geojson', data: {type: 'FeatureCollection', features: []},
     attribution: 'Peak names © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'};
 const NAME = ['coalesce', ['get', 'name'], ''];
+// Height shown and filtered on: the surveyed (OpenStreetMap) height where there is one, otherwise NepalDTM's,
+// marked "≈" because sharp summits read low in an 8 m model.
+const HEIGHT = ['coalesce', ['get', 'osm'], ['get', 'h']];
+const HEIGHT_TEXT = ['concat', ['case', ['has', 'osm'], '', '≈ '], ['number-format', HEIGHT, {locale: 'en-US', 'max-fraction-digits': 0}], ' m'];
 style.layers.push(
     {id: 'peaks-dot', type: 'circle', source: 'peaks', layout: {visibility: 'none', 'circle-sort-key': ['get', 'prom']},
      paint: {'circle-radius': ['interpolate', ['linear'], ['get', 'prom'], 100, 2.5, 500, 4, 2000, 6.5], 'circle-color': '#dc143c',
@@ -64,8 +68,7 @@ style.layers.push(
     {id: 'peaks-label', type: 'symbol', source: 'peaks', layout: {
         visibility: 'none', 'symbol-sort-key': ['-', 0, ['+', ['get', 'prom'], ['/', ['get', 'h'], 10000]]],
         'text-font': ['Noto Sans Medium'], 'text-size': 12,
-        'text-field': ['format', NAME, {}, ['case', ['==', NAME, ''], '', '\n'], {},
-                       ['concat', ['number-format', ['get', 'h'], {locale: 'en-US'}], ' m'], {'font-scale': 0.85}],
+        'text-field': ['format', NAME, {}, ['case', ['==', NAME, ''], '', '\n'], {}, HEIGHT_TEXT, {'font-scale': 0.85}],
         'text-anchor': 'top', 'text-offset': [0, 0.6], 'text-max-width': 9},
      paint: {'text-color': '#101d36', 'text-halo-color': 'rgba(255,255,255,.92)', 'text-halo-width': 1.4}},
 );
@@ -360,13 +363,15 @@ function updatePeaks() {
     if (lo > hi) [lo, hi] = [hi, lo];
     $('peak-min-val').textContent = fmtH(lo);
     $('peak-max-val').textContent = fmtH(hi);
-    const filter = ['all', ['>=', ['get', 'h'], lo], ['<=', ['get', 'h'], hi]];
+    const filter = ['all', ['>=', HEIGHT, lo], ['<=', HEIGHT, hi]];
     map.setFilter('peaks-dot', filter);
     map.setFilter('peaks-label', filter);
     if (peaks) {
-        const n = peaks.features.filter(f => f.properties.h >= lo && f.properties.h <= hi).length;
+        const n = peaks.features.filter(f => (f.properties.osm ?? f.properties.h) >= lo && (f.properties.osm ?? f.properties.h) <= hi).length;
         $('peak-count').textContent = `${n.toLocaleString('en-US')} summits in this range. Found in NepalDTM: each stands at least ` +
-            '100 m above the ground linking it to any higher peak. Bigger dots stand out more. Names from OpenStreetMap.';
+            '100 m above the ground linking it to any higher peak. Bigger dots stand out more. Names and surveyed heights from ' +
+            'OpenStreetMap; ≈ marks NepalDTM heights' +
+            (peaks.check ? `, which read a median ${Math.abs(peaks.check.all.median)} m low on named summits.` : '.');
     }
 }
 
@@ -375,7 +380,7 @@ $('peaks-on').onchange = async e => {
     $('peak-controls').hidden = !on;
     if (on && !peaks) {
         $('peak-count').textContent = 'Loading summits…';
-        peaks = await (await fetch('/data/summits.geojson')).json();
+        peaks = await (await fetch('/data/summits.geojson', {cache: 'no-cache'})).json();
         map.getSource('peaks').setData(peaks);
     }
     for (const id of ['peaks-dot', 'peaks-label']) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
@@ -484,7 +489,7 @@ async function inspect(ll, peak) {
     const seq = ++inspectSeq;
     marker.setLngLat(ll).addTo(map);
     $('inspect').hidden = false;
-    if (!inNepal(nepal, ll.lng, ll.lat)) {
+    if (!peak && !inNepal(nepal, ll.lng, ll.lat)) {  // border summits are kept: the 8 m tiles run 1 km past the border
         $('inspect-body').innerHTML = `<p class="ll">${fmtLL(ll)}</p><p>This point is outside Nepal.</p>`;
         return;
     }
@@ -499,8 +504,9 @@ async function inspect(ll, peak) {
     const rows = [];
     if (peak) {
         rows.push(['Summit', `<b>${peak.name || 'Unnamed'}</b>`]);
+        if (peak.osm != null) rows.push(['Surveyed height', `<b>${peak.osm.toLocaleString('en-US')} m</b>`]);
+        rows.push(['NepalDTM summit', fmtM(peak.h)]);
         rows.push(['Prominence', `at least ${fmtM(peak.prom)}`]);
-        if (peak.osm != null) rows.push(['Height (OpenStreetMap)', fmtM(peak.osm)]);
     }
     if (ground != null) rows.push(['Bare earth', `<b>${ground.toFixed(1)} m</b>`]);
     if (surface != null) rows.push(['Surface', `${surface.toFixed(1)} m`]);
@@ -516,8 +522,19 @@ async function inspect(ll, peak) {
     $('inspect-body').innerHTML = `<p class="ll">${fmtLL(ll)}</p>` +
         (rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`
                      : '<p>No value at this point.</p>') +
+        (peak ? summitNote(peak) : '') +
         `<p class="files">Tile <code>${name}</code> · download ${links}</p>` +
         '<p class="fine">Heights above the EGM2008 geoid.</p>';
+}
+
+// How far to trust a summit's NepalDTM height, from the summit check in summits.geojson.
+function summitNote(peak) {
+    const c = peaks?.check;
+    if (!c || !peak.src) return '';
+    const [g, where] = peak.src === 1 ? [c.hma_8m, 'the 8 m stereo data'] : [c.copernicus_fill, 'the 30 m Copernicus fill'];
+    return `<p class="summit-note${peak.src === 2 ? ' warn' : ''}">This summit's height comes from ${where}. ` +
+        `Named summits there read a median ${Math.abs(g.median)} m below their surveyed heights (${g.n} compared), ` +
+        `and ${Math.round(g.share_more_than_50m_low * 100)}% are more than 50 m low. Sharp tops are flattened in an elevation model.</p>`;
 }
 
 $('inspect-close').onclick = () => { $('inspect').hidden = true; marker.remove(); };

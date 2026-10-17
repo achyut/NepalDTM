@@ -411,6 +411,11 @@ Terrain shape at that spacing exists where the HMA mosaic supplies the surface, 
 Elsewhere the hills and valleys are still the Copernicus 30~m shape, with a canopy adjustment on top.
 Above 40~degrees the RMSE exceeds 10~m.
 Glacier ice is the other weak place: the bare-earth model sits several metres below the 2015--2016 glacier-surface GPS.
+Summits read low.
+For 406 summits found in the model and matched to a named OpenStreetMap peak with a recorded height, the highest 8~m cell is a median 21.2~m below that height (RMSE 66.4~m).
+The gap is 16.3~m where the HMA mosaic supplies the surface and 32.8~m in Copernicus fill (\texttt{validation/summit\_check.json}).
+A sharp summit is narrower than the patch a stereo or radar height represents, so its top is averaged with the slopes below.
+The OpenStreetMap heights (\copyright~OpenStreetMap contributors, ODbL) mostly come from published surveys but are not controlled, so this is a check, not an accuracy figure.
 The predicted-error band is a model of the absolute residual, not a second survey.
 
 \section{Data and code}

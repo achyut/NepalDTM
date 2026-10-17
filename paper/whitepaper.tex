@@ -220,6 +220,14 @@ The median step between adjacent pixels inside a tile is 2.06~m.
 A search for a horizontal shift against ICESat-2, in each province, returns 0~m east and 0~m north at the best position.
 The predicted absolute error on the error tile has median 4.3~m and 90th percentile 8.8~m.
 
+Mountain summits are the exception to these figures.
+\texttt{scripts/summits.py} finds every summit with at least 100~m of prominence and compares the highest 8~m cell of each with the height of the named OpenStreetMap peak within 300~m.
+For the 406 matched summits the model is a median 21.2~m lower (RMSE 66.4~m), and 25\% are more than 50~m lower.
+On the HMA mosaic the median is 16.3~m lower; in Copernicus fill it is 32.8~m lower.
+The result is in \texttt{validation/summit\_check.json}.
+For the height of a named peak, use the surveyed figure; the web map shows both.
+Peak names and heights: \copyright~OpenStreetMap contributors, ODbL.
+
 \section{How to read the 8~m grid}
 
 Use the bare-earth tile for the ground, the surface tile for the top of trees and buildings, and the error tile as a per-cell warning rather than as a second elevation.

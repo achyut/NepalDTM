@@ -11,8 +11,13 @@
    Makalu, Cho Oyu, Kangchenjunga) are included. Where an OpenStreetMap natural=peak with a name lies within 300 m, its name
    and recorded height are attached (data (c) OpenStreetMap contributors, ODbL).
 
-Properties: h (NepalDTM bare-earth height, m), prom (prominence of at least this many m), name and osm
-(OpenStreetMap name and height) where matched.
+5. Each summit gets the source of its 8 m cell from the _aux tiles (read from R2): 1 = HMA 8 m stereo,
+   2 = Copernicus 30 m fill.
+6. Summits with an OpenStreetMap height are compared with it (most come from published surveys), overall and by
+   source, and the result is written to validation/summit_check.json.
+
+Properties: h (NepalDTM bare-earth height, m), prom (prominence of at least this many m), src (1 HMA 8 m,
+2 Copernicus fill), name and osm (OpenStreetMap name and height) where matched.
 
 Run from the repository root after downloading the _dtm tiles:
     .venv/bin/python -I scripts/summits.py [--reuse]
@@ -23,12 +28,14 @@ Steps 1-2 take about 20 minutes and are saved to code/data/nw/summit_candidates.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import time
 import urllib.parse
 import urllib.request
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -47,6 +54,8 @@ VRT = ROOT / "code" / "data" / "nw" / "nepal_dtm_8m.vrt"
 NEPAL = ROOT / "code" / "data" / "control" / "nepal_boundary.geojson"
 OUT = ROOT / "site" / "data" / "summits.geojson"
 CANDIDATES = ROOT / "code" / "data" / "nw" / "summit_candidates.npz"
+CHECK = ROOT / "validation" / "summit_check.json"
+AUX = "/vsicurl/https://nepaldtm-data.achyutpdl.com/cog/{}_aux.tif"
 BORDER = 1000  # m: keep summits this close outside Nepal (border peaks)
 BLOCK = 12  # 8 m cells per side of a grid cell: 96 m
 TILE = 3000  # cells per side of a 24 km tile
@@ -103,6 +112,50 @@ def candidates(src):
     return rc, prom
 
 
+def tile_id(x, y):
+    """The 24 km processing tile holding a UTM 45N point, named as nw_tiles.py names it."""
+    return f"E{int(x // 24000 * 24):04d}N{int(y // 24000 * 24):04d}"
+
+
+def sources(summits):
+    """Band 1 of the _aux tile at each summit: 1 HMA 8 m stereo, 2 Copernicus 30 m fill (0 if unreadable)."""
+    by_tile = {}
+    for i, s in enumerate(summits):
+        by_tile.setdefault(tile_id(s["x"], s["y"]), []).append(i)
+    out = [0] * len(summits)
+
+    def read(tile):
+        try:
+            with rasterio.open(AUX.format(tile)) as src:
+                for i in by_tile[tile]:
+                    r, c = src.index(summits[i]["x"], summits[i]["y"])
+                    out[i] = int(src.read(1, window=Window(c, r, 1, 1))[0, 0])
+        except rasterio.RasterioIOError:
+            pass
+
+    with rasterio.Env(GDAL_HTTP_USERAGENT="nepaldtm-summits/1.0", GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR"), \
+            ThreadPoolExecutor(8) as pool:
+        list(pool.map(read, by_tile))
+    return out
+
+
+def summit_check(summits):
+    """NepalDTM summit heights against OpenStreetMap heights, overall and by source."""
+    def stats(rows):
+        d = np.array([s["h"] - s["osm"] for s in rows])
+        return {"n": len(d), "median": round(float(np.median(d)), 1), "median_abs": round(float(np.median(np.abs(d))), 1),
+                "rmse": round(float(np.sqrt(np.mean(d ** 2))), 1), "share_more_than_50m_low": round(float(np.mean(d < -50)), 3)}
+    rows = [s for s in summits if "osm" in s]
+    return {
+        "description": "NepalDTM bare-earth height of each summit (highest 8 m cell) minus the OpenStreetMap height of "
+                       f"the named peak within {NAME_RADIUS} m. Metres; negative = NepalDTM lower.",
+        "generated": datetime.date.today().isoformat(),
+        "all": stats(rows),
+        "hma_8m": stats([s for s in rows if s["src"] == 1]),
+        "copernicus_fill": stats([s for s in rows if s["src"] == 2]),
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--reuse", action="store_true", help=f"start from {CANDIDATES.name}")
@@ -148,12 +201,21 @@ def main() -> None:
                     summits[si]["osm"] = ele
         print(f"{len(used)} of {len(names)} named OpenStreetMap peaks matched within {NAME_RADIUS} m", flush=True)
 
+    for s, src in zip(summits, sources(summits)):
+        s["src"] = src
+    print(f"source read for {sum(s['src'] > 0 for s in summits)} of {len(summits)} summits", flush=True)
+    check = summit_check(summits)
+    CHECK.write_text(json.dumps(check, indent=1) + "\n")
+    print(f"summit check -> {CHECK.relative_to(ROOT)}: {json.dumps({k: check[k] for k in ('all', 'hma_8m', 'copernicus_fill')})}", flush=True)
+
     summits.sort(key=lambda s: -s["h"])
     features = [{"type": "Feature",
-                 "properties": {"h": round(s["h"]), "prom": s["prom"],
+                 "properties": {"h": round(s["h"]), "prom": s["prom"], "src": s["src"],
                                 **({"name": s["name"]} if "name" in s else {}), **({"osm": s["osm"]} if "osm" in s else {})},
                  "geometry": {"type": "Point", "coordinates": [round(s["lon"], 5), round(s["lat"], 5)]}} for s in summits]
-    OUT.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":"), ensure_ascii=False))
+    # The check rides along (a GeoJSON foreign member, ignored by map libraries) so the map can quote it.
+    OUT.write_text(json.dumps({"type": "FeatureCollection", "check": check, "features": features},
+                              separators=(",", ":"), ensure_ascii=False))
     print(f"{len(features)} summits -> {OUT.relative_to(ROOT)} ({OUT.stat().st_size / 1e3:.0f} KB) in {time.time() - t0:.0f} s")
     for f in features[:8]:
         print("  ", f["properties"])
