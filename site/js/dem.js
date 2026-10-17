@@ -8,6 +8,8 @@
 //
 // Values depend on the pixel size: zoom 14 (8.4 m pixels over Nepal) is the finest.
 
+import {DEFAULT_PALETTE, stopsFor} from './palettes.js';
+
 export const TILE_SIZE = 256;
 export const TILE_MAX_ZOOM = 14;
 const N = TILE_SIZE;
@@ -68,22 +70,11 @@ export const pixelSize = (z, y) => {
     return 40075016.686 * Math.cos(lat) / (n * N);
 };
 
-// Each scale has a light and a dark version: low values sit close to the page colour, high values stand out.
+// What each measure spans and how it is labelled. The colours live in palettes.js, so a scheme can change
+// without touching the maths.
 export const DERIVED = {
-    slope: {
-        label: 'Slope', unit: '°', max: 60, ticks: ['0°', '15°', '30°', '45°', '60°+'],
-        light: [[0, '#f4f7fb'], [5, '#dfe8c8'], [12, '#f1e2a0'], [20, '#f2b86c'], [30, '#e07a4f'],
-                [40, '#c03a3e'], [50, '#7d1d3a'], [60, '#3d0f2a']],
-        dark: [[0, '#16213a'], [8, '#3b1f5c'], [16, '#6b1f6f'], [24, '#a12f5e'], [32, '#d24c3a'],
-               [42, '#f07a1f'], [52, '#f9b425'], [60, '#fcf6a3']],
-    },
-    roughness: {
-        label: 'Roughness', unit: 'm', max: 40, ticks: ['0', '10', '20', '30', '40 m+'],
-        light: [[0, '#f4f7fb'], [2, '#d3dae6'], [5, '#a9bbdc'], [10, '#6f92cc'], [20, '#2f63b8'],
-                [30, '#003893'], [40, '#0a1528']],
-        dark: [[0, '#16213a'], [2, '#1d3462'], [5, '#23508f'], [10, '#2f6fc0'], [20, '#5a9be0'],
-               [30, '#9cc4f2'], [40, '#e6f0ff']],
-    },
+    slope: {label: 'Slope', unit: '°', max: 60, ticks: ['0°', '15°', '30°', '45°', '60°+']},
+    roughness: {label: 'Roughness', unit: 'm', max: 40, ticks: ['0', '10', '20', '30', '40 m+']},
     aspect: {label: 'Aspect', unit: '°', flat: 2, flatColor: {light: '#d9dde3', dark: '#3a4458'}},
 };
 
@@ -109,13 +100,23 @@ function table(stops, max) {
     for (let i = 0; i <= max * STEP; i++) t.set(ramp(rgb, i / STEP), 3 * i);
     return t;
 }
-const LUT = Object.fromEntries(['light', 'dark'].map(theme => {
-    const aspect = new Uint8ClampedArray(361 * 3);
-    for (let d = 0; d < 360; d++) aspect.set(aspectColor(d, theme), 3 * d);
-    aspect.set(hex(DERIVED.aspect.flatColor[theme]), 3 * 360);
-    return [theme, {slope: table(DERIVED.slope[theme], DERIVED.slope.max),
-                    roughness: table(DERIVED.roughness[theme], DERIVED.roughness.max), aspect}];
-}));
+// Built once per scheme and theme, the first time that pair is drawn.
+const LUTS = new Map();
+
+function lut(palette, theme) {
+    const key = `${palette}/${theme}`;
+    if (!LUTS.has(key)) {
+        const aspect = new Uint8ClampedArray(361 * 3);
+        for (let d = 0; d < 360; d++) aspect.set(aspectColor(d, theme), 3 * d);
+        aspect.set(hex(DERIVED.aspect.flatColor[theme]), 3 * 360);
+        LUTS.set(key, {
+            slope: table(stopsFor(palette, theme, 'slope'), DERIVED.slope.max),
+            roughness: table(stopsFor(palette, theme, 'roughness'), DERIVED.roughness.max),
+            aspect,
+        });
+    }
+    return LUTS.get(key);
+}
 
 // HSL to RGB for the aspect wheel: hue = facing direction, so north is red, south is cyan.
 export function aspectColor(deg, theme = 'light') {
@@ -162,10 +163,11 @@ function window3(P, i, j) {
 
 // Slope, aspect or roughness as RGBA pixels for one tile, or null where there is no terrain.
 // The same Horn and 3 x 3 window as horn() and roughness(), written out so the loop allocates nothing.
-export async function renderDerived(tileHeights, kind, z, x, y, theme) {
+export async function renderDerived(tileHeights, kind, z, x, y, theme, palette = DEFAULT_PALETTE) {
     const P = await padded(tileHeights, z, x, y);
     if (!P) return null;
-    const out = new Uint8ClampedArray(N * N * 4), lut = LUT[theme][kind], W = N + 2, cell8 = 8 * pixelSize(z, y);
+    const table = lut(palette, theme)[kind];
+    const out = new Uint8ClampedArray(N * N * 4), W = N + 2, cell8 = 8 * pixelSize(z, y);
     const maxI = (kind === 'slope' ? DERIVED.slope.max : DERIVED.roughness.max) * STEP;
     const deg = 180 / Math.PI, flat = Math.tan(DERIVED.aspect.flat / deg);
     for (let j = 0; j < N; j++) {
@@ -182,7 +184,7 @@ export async function renderDerived(tileHeights, kind, z, x, y, theme) {
                 if (kind === 'slope') t = Math.min(maxI, Math.round(Math.atan(grad) * deg * STEP));
                 else t = grad < flat ? 360 : Math.round(Math.atan2(-dzdx, dzdy) * deg + 360) % 360;
             }
-            out[o] = lut[3 * t]; out[o + 1] = lut[3 * t + 1]; out[o + 2] = lut[3 * t + 2]; out[o + 3] = 255;
+            out[o] = table[3 * t]; out[o + 1] = table[3 * t + 1]; out[o + 2] = table[3 * t + 2]; out[o + 3] = 255;
         }
     }
     return out;

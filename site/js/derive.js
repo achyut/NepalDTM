@@ -53,7 +53,7 @@ maplibregl.addProtocol('derive', (params, abort) => new Promise((resolve, reject
     const [, kind, z, x, y, query] = params.url.match(/^derive:\/\/(\w+)\/(\d+)\/(\d+)\/(\d+)(?:\?(.*))?$/);
     const q = new URLSearchParams(query);
     const msg = {id: nextId++, kind, z: +z, x: +x, y: +y, theme: q.get('t') === 'dark' ? 'dark' : 'light',
-                 az: +q.get('az'), alt: +q.get('alt')};
+                 palette: q.get('p') || undefined, az: +q.get('az'), alt: +q.get('alt')};
     const job = {msg, key: `${+z - 2}/${x >> 2}/${y >> 2}`,
                  resolve: async bmp => resolve({data: bmp || await empty()}), reject};
     queue.push(job);

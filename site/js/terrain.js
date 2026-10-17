@@ -3,6 +3,7 @@
 // Expects the maplibregl global from its script tag.
 
 import {TILE_MAX_ZOOM, TILE_SIZE, heightSource, locate} from './dem.js';
+import {stopsFor} from './palettes.js';
 
 export {TILE_MAX_ZOOM}; // highest zoom in the archive, about 8.4 m per pixel over Nepal
 
@@ -36,11 +37,8 @@ maplibregl.addProtocol('terrain', async (params, abort) => {
     return {data: await r.arrayBuffer()};
 });
 
-// Light Swiss-style hypsometric tints, after the sodc-proposal basemap: the hillshade carries the form.
-export const RELIEF = [
-    [0, '#a7c896'], [200, '#bcd5a8'], [600, '#d3e0bb'], [1200, '#e8e8c9'], [2000, '#efe3c6'],
-    [3000, '#e3d1b5'], [4000, '#d6cbbf'], [5000, '#e0dedb'], [6000, '#f1f0ee'], [8850, '#ffffff'],
-];
+// The height ramp of the chosen scheme. palettes.js holds them all; imhof is the cartographic default.
+export const reliefStops = (palette, theme) => stopsFor(palette, theme, 'elevation');
 
 // Surroundings: the page around the map, the colour hiding everything outside Nepal, and the border.
 export const THEMES = {
@@ -109,7 +107,7 @@ export function inNepal(fc, lng, lat) {
     });
 }
 
-export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light} = {}) {
+export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, palette = 'imhof', mode = 'light'} = {}) {
     const {outside, border} = theme;
     const dem = {type: 'raster-dem', tiles: [`terrain://${TILE_URL}`], tileSize: TILE_SIZE, encoding: 'terrarium',
                  minzoom: 5, maxzoom: TILE_MAX_ZOOM, bounds: [79.79, 26.08, 88.3, 30.81]};
@@ -126,7 +124,7 @@ export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light} =
             {id: 'background', type: 'background', paint: {'background-color': outside}},
             {id: 'land', type: 'fill', source: 'nepal', paint: {'fill-color': '#eef0f2'}},
             {id: 'relief', type: 'color-relief', source: 'relief',
-             paint: {'color-relief-color': ['interpolate', ['linear'], ['elevation'], ...RELIEF.flat()]}},
+             paint: {'color-relief-color': ['interpolate', ['linear'], ['elevation'], ...reliefStops(palette, mode).flat()]}},
             {id: 'hillshade', type: 'hillshade', source: 'relief',
              paint: {'hillshade-exaggeration': ['interpolate', ['linear'], ['zoom'], 5, 0.7, 9, 0.6, 12, 0.5, 15, 0.35],
                      'hillshade-shadow-color': 'rgb(64, 82, 104)', 'hillshade-highlight-color': 'rgb(255, 249, 214)',

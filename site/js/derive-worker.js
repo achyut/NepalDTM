@@ -30,7 +30,7 @@ self.onmessage = async ({data: m}) => {
         } else {
             const render = {shadow: renderShadow, swiss: renderSwiss}[m.kind];
             const rgba = render ? await render(tileHeights, m.z, m.x, m.y, m.az, m.alt)
-                                : await renderDerived(tileHeights, m.kind, m.z, m.x, m.y, m.theme);
+                                : await renderDerived(tileHeights, m.kind, m.z, m.x, m.y, m.theme, m.palette);
             if (rgba) bmp = await createImageBitmap(new ImageData(rgba, TILE_SIZE, TILE_SIZE));
         }
         if (!bmp) return self.postMessage({id: m.id});

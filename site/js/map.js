@@ -1,5 +1,6 @@
-import {DATA_URL, MAX_BOUNDS, NEPAL_BOUNDS, RELIEF, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNepal,
-    redrawDrape, terrainStyle} from './terrain.js';
+import {DATA_URL, MAX_BOUNDS, NEPAL_BOUNDS, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNepal,
+    redrawDrape, reliefStops, terrainStyle} from './terrain.js';
+import {PALETTES, rememberPalette, stopsFor, storedPalette} from './palettes.js';
 import {DERIVED, SHADE_ALT, aspectColor, compass, derivedAt, derivedSource, horn, sunPosition} from './derive.js';
 import {currentTheme, initThemeToggle} from './theme.js';
 
@@ -69,14 +70,17 @@ let colorOn = params.get('color') !== '0';  // hillshade coloured by height (the
 let light = 'nw';      // 'nw': a fixed direction, below; 'sun': the real sun for a date and time, with cast shadows
 let fixedAz = 315;     // the Swiss convention, from the north-west
 
+let palette = storedPalette();
+
 const nepal = await loadNepal();
-const style = terrainStyle(nepal, {theme: THEMES[currentTheme()]});
+const style = terrainStyle(nepal, {theme: THEMES[currentTheme()], palette, mode: currentTheme()});
 const SHADE = {
     full: style.layers.find(l => l.id === 'hillshade').paint['hillshade-exaggeration'],
     soft: ['interpolate', ['linear'], ['zoom'], 5, 0.4, 12, 0.3, 15, 0.2],
     sun: ['interpolate', ['linear'], ['zoom'], 5, 0.45, 12, 0.35, 15, 0.25],  // lighter, so cast shadows stand out
 };
-for (const k of Object.keys(DERIVED)) style.sources[`derive-${k}`] = derivedSource(k, DATA_BOUNDS, `?t=${currentTheme()}`);
+const derivedQuery = () => `?t=${currentTheme()}&p=${palette}`;
+for (const k of Object.keys(DERIVED)) style.sources[`derive-${k}`] = derivedSource(k, DATA_BOUNDS, derivedQuery());
 // The land under the shading: pale paper in light mode, slate in dark mode.
 const LAND = {light: '#eef0f2', dark: '#3a4458'};
 style.layers.find(l => l.id === 'land').paint['fill-color'] = LAND[currentTheme()];
@@ -156,10 +160,21 @@ map.once('style.load', () => peakTheme(currentTheme()));
 initThemeToggle(theme => {
     peakTheme(theme);
     map.setPaintProperty('land', 'fill-color', LAND[theme]);
-    for (const k of Object.keys(DERIVED)) map.getSource(`derive-${k}`).setTiles([`derive://${k}/{z}/{x}/{y}?t=${theme}`]);
+    applyPalette();
     applyTheme(map, THEMES[theme]);
     showViz();
 });
+
+// Swap every ramp: the height colours are a paint property, the measures are baked into their tiles.
+function applyPalette() {
+    const theme = currentTheme();
+    map.setPaintProperty('relief', 'color-relief-color',
+                         ['interpolate', ['linear'], ['elevation'], ...reliefStops(palette, theme).flat()]);
+    for (const k of Object.keys(DERIVED)) {
+        map.getSource(`derive-${k}`).setTiles([`derive://${k}/{z}/{x}/{y}${derivedQuery()}`]);
+    }
+    redrawDrape(map);
+}
 
 let exaggeration = 1.5;
 
@@ -271,7 +286,7 @@ const wheel = theme => `conic-gradient(${Array.from({length: 13}, (_, i) =>
 const diagonal = g => g.replace('90deg', '135deg');
 
 function swatch(name, theme) {
-    const relief = diagonal(gradient(RELIEF, 8850));
+    const relief = diagonal(gradient(reliefStops(palette, theme), 8850));
     return {
         'hillshade': theme === 'dark' ? 'linear-gradient(135deg, #c9d2df, #5d6b80 55%, #1d2638)'
                                       : 'linear-gradient(135deg, #fffbe6, #9aa6b4 55%, #4a5a6c)',
@@ -280,9 +295,9 @@ function swatch(name, theme) {
             : 'linear-gradient(135deg, #fffcee, #b0c2d6 45%, #263040)',
         'color-relief': relief,
         'color-hillshade': `linear-gradient(135deg, rgba(255,251,230,.5), rgba(64,82,104,.55)), ${relief}`,
-        'slope': diagonal(gradient(DERIVED.slope[theme], DERIVED.slope.max)),
+        'slope': diagonal(gradient(stopsFor(palette, theme, 'slope'), DERIVED.slope.max)),
         'aspect': wheel(theme),
-        'roughness': diagonal(gradient(DERIVED.roughness[theme], DERIVED.roughness.max)),
+        'roughness': diagonal(gradient(stopsFor(palette, theme, 'roughness'), DERIVED.roughness.max)),
     }[name];
 }
 
@@ -294,8 +309,8 @@ const ABOUT = {
         'which turns a steep hillside into noise; this shades three widths of landform and leans on the broadest, so ' +
         'ridges and valleys read as whole shapes. Crests are brightened, hollows deepened, and low ground fades into a ' +
         'pale haze so the high country comes forward. Turn off "Colour by height" for grey relief alone.',
-    'color-relief': 'Colour by height above sea level: green in the Terai, pale yellow in the hills, tan and brown in the ' +
-        'mountains, grey and white above about 5,000 m. There is no shading, so heights are easy to compare.',
+    'color-relief': 'Colour by height above sea level, with no shading at all, so heights are easy to compare ' +
+        'and nothing is lost in a shadow.',
     'color-hillshade': 'Height colours with hillshade on top: the colour tells you how high the ground is, ' +
         'the shading shows its shape.',
     'slope': 'How steep the ground is, in degrees from flat. Low values are flat fields and valley floors; high values are ' +
@@ -310,11 +325,17 @@ const ABOUT = {
 const ZOOM_NOTE = '<p class="legend-note">Worked out from the map tiles at the current zoom; finest at zoom 14 (8.4 m). Lower zooms read gentler.</p>';
 
 function legendHtml(name, theme) {
-    const v = VIZ[name], about = `<p class="legend-about">${ABOUT[aboutKey(name)]}</p>`;
+    const v = VIZ[name];
+    const ramped = v.relief || v.derived === 'slope' || v.derived === 'roughness'
+        || ((name === 'hillshade' || name === 'swiss') && colorOn);
+    const about = `<p class="legend-about">${ABOUT[aboutKey(name)]}` +
+        (ramped ? ` <span class="legend-scheme">${PALETTES[palette].note}</span>` : '') + '</p>';
     const bar = (bg, ticks) => `<div class="legend-bar" style="background:${bg}"></div>` +
         `<div class="legend-ticks">${ticks.map(t => `<span>${t}</span>`).join('')}</div>`;
     if ((name === 'hillshade' || name === 'swiss') && !colorOn) return about;
-    if (v.relief || name === 'hillshade' || name === 'swiss') return bar(gradient(RELIEF, 8850), ['0', '2,000', '4,000', '6,000', '8,850 m']) + about;
+    if (v.relief || name === 'hillshade' || name === 'swiss') {
+        return bar(gradient(reliefStops(palette, theme), 8850), ['0', '2,000', '4,000', '6,000', '8,850 m']) + about;
+    }
     if (v.derived === 'aspect') {
         return `<div class="legend-wheel"><div class="wheel" style="background:${wheel(theme)}">` +
             '<span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span></div>' +
@@ -322,7 +343,7 @@ function legendHtml(name, theme) {
             about + ZOOM_NOTE;
     }
     const d = DERIVED[v.derived];
-    return bar(gradient(d[theme], d.max), d.ticks) + about + ZOOM_NOTE;
+    return bar(gradient(stopsFor(palette, theme, v.derived), d.max), d.ticks) + about + ZOOM_NOTE;
 }
 
 for (const [name, v] of Object.entries(VIZ)) {
@@ -352,6 +373,7 @@ function showViz() {
     $('color-wrap').hidden = viz !== 'hillshade' && viz !== 'swiss';
     $('viz-color').checked = colorOn;
     $('legend').innerHTML = legendHtml(viz, theme);
+    showPalette();
     const url = new URL(location.href);
     url.searchParams.delete('viz');
     url.searchParams.delete('color');
@@ -360,6 +382,41 @@ function showViz() {
     history.replaceState(history.state, '', url);
 }
 $('viz-color').onchange = e => { colorOn = e.target.checked; setViz(viz); };
+
+// Colour scheme. Only the ramped layers use it, so the row is hidden for plain hillshade.
+for (const [name, p] of Object.entries(PALETTES)) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.dataset.palette = name;
+    b.title = `${p.label} — ${p.note}`;
+    b.innerHTML = `<i class="swatch"></i>${p.label}`;
+    b.onclick = () => {
+        palette = name;
+        rememberPalette(name);
+        applyPalette();
+        showViz();
+    };
+    $('palette').append(b);
+}
+
+function showPalette() {
+    const theme = currentTheme();
+    const ramped = VIZ[viz].relief || VIZ[viz].derived === 'slope' || VIZ[viz].derived === 'roughness'
+        || ((viz === 'hillshade' || viz === 'swiss') && colorOn);
+    $('palette-wrap').hidden = !ramped;
+    for (const b of $('palette').children) {
+        b.setAttribute('aria-checked', b.dataset.palette === palette);
+        const measure = VIZ[viz].derived === 'roughness' ? 'roughness'
+                      : VIZ[viz].derived === 'slope' ? 'slope' : 'elevation';
+        const max = measure === 'elevation' ? 8850 : DERIVED[measure].max;
+        b.firstElementChild.style.background = diagonal(gradient(stopsFor(b.dataset.palette, theme, measure), max));
+    }
+    const url = new URL(location.href);
+    if (palette === 'imhof') url.searchParams.delete('palette'); else url.searchParams.set('palette', palette);
+    history.replaceState(history.state, '', url);
+}
+
 showViz();
 
 // Light: fixed from the north-west, or the real sun for a date and Nepal time (UTC+5:45) at the map centre.
