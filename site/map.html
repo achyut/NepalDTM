@@ -24,11 +24,86 @@
     <a class="brand" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2.5 18.5 9 7l3.6 5.6 2.6-3.6 6.3 9.5"/><path d="M6.4 11.6 9 13.4l2.2-1.5" stroke-width="1.3"/><path d="M2.5 20.5h19" stroke="#dc143c"/></svg>NepalDTM</a>
     <div class="vbar-read" id="readout" aria-live="polite">Move over the map to read elevation</div>
     <nav><a href="/#data">Data</a><a href="/#paper">Paper</a></nav>
+    <button class="view-toggle" type="button" id="view-toggle" aria-expanded="false" aria-controls="view-popup">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 16 9 5.5l4 6.5 2.5-3.5 6 7.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M2.5 19.5h19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        View
+    </button>
+    <button class="view-toggle" type="button" id="sun-toggle" aria-expanded="false" aria-controls="sun-popup" aria-label="Light">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M5.2 18.8l1.9-1.9M16.9 7.1l1.9-1.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
     <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark mode">
         <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
         <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
 </header>
+
+<section class="popup" id="view-popup" hidden aria-label="View">
+    <div class="seg" role="group" aria-label="View mode">
+        <button id="mode-2d" aria-pressed="false">2D</button>
+        <button id="mode-3d" aria-pressed="true">3D</button>
+    </div>
+    <label class="range">Height exaggeration <output id="exag-val">1.5×</output>
+        <input autocomplete="off" type="range" id="exag" min="1" max="4" step="0.1" value="1.5">
+    </label>
+    <label class="range">Rotate <output id="bearing-val">0°</output>
+        <input autocomplete="off" type="range" id="bearing" min="-180" max="180" step="1" value="0">
+    </label>
+    <div class="keys" role="group" aria-label="Rotate the map">
+        <button type="button" id="rot-left" aria-label="Rotate 90 degrees left">↺ 90°</button>
+        <button type="button" id="rot-right" aria-label="Rotate 90 degrees right">↻ 90°</button>
+        <button type="button" id="rot-north">North up</button>
+        <button type="button" id="rot-spin" aria-pressed="false">Spin</button>
+    </div>
+    <label class="range">Tilt <output id="pitch-val">0°</output>
+        <input autocomplete="off" type="range" id="pitch" min="0" max="85" step="1" value="0">
+    </label>
+    <div class="keys" role="group" aria-label="Tilt the map">
+        <button type="button" id="tilt-flat">Flat</button>
+        <button type="button" id="tilt-45">45°</button>
+        <button type="button" id="tilt-65">65°</button>
+        <button type="button" id="tilt-max">85°</button>
+    </div>
+</section>
+
+<section class="popup popup-sun" id="sun-popup" hidden aria-label="Light">
+<div class="seg" role="group" aria-label="Light">
+        <button type="button" id="light-nw" aria-pressed="true">North-west</button>
+        <button type="button" id="light-sun" aria-pressed="false">Real sun</button>
+    </div>
+    <div class="keys" role="group" aria-label="Light direction">
+        <button type="button" data-az="315">NW</button>
+        <button type="button" data-az="45">NE</button>
+        <button type="button" data-az="135">SE</button>
+        <button type="button" data-az="225">SW</button>
+    </div>
+        <div class="sun-controls" id="sun-controls" hidden>
+            <div class="year">Year <input autocomplete="off" type="number" id="sun-year" min="1900" max="2100" step="1" inputmode="numeric"></div>
+            <div class="range">
+        <div class="range-top">
+            <label for="sun-day">Date</label>
+            <button class="play" id="play-day" type="button" aria-pressed="false" aria-label="Play through the year"><svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><svg class="stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="6" width="3.5" height="12"/><rect x="13.5" y="6" width="3.5" height="12"/></svg></button>
+            <output id="sun-date-val"></output>
+        </div>
+        <input autocomplete="off" type="range" id="sun-day" min="0" max="364" step="1" value="0">
+            </div>
+            <div class="range">
+        <div class="range-top">
+            <label for="sun-hour">Time (Nepal)</label>
+            <button class="play" id="play-hour" type="button" aria-pressed="false" aria-label="Play through the day"><svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><svg class="stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="6" width="3.5" height="12"/><rect x="13.5" y="6" width="3.5" height="12"/></svg></button>
+            <output id="sun-time">12:00</output>
+        </div>
+        <input autocomplete="off" type="range" id="sun-hour" min="0" max="24" step="0.25" value="12">
+            </div>
+            <div class="keys" role="group" aria-label="Time of day">
+            <button type="button" data-hour="6">6am</button>
+            <button type="button" data-hour="9">9am</button>
+            <button type="button" data-hour="12">Noon</button>
+            <button type="button" data-hour="15">3pm</button>
+        </div>
+        <p class="hint" id="sun-info"></p>
+            <p class="legend-note">Shading follows the sun as you drag; shadows cast by ridges appear when you let go.</p>
+        </div>
+</section>
 
 <aside class="panel" id="panel">
     <button class="sheet-handle" id="sheet-toggle" aria-expanded="true" aria-controls="panel-body">
@@ -36,51 +111,11 @@
     </button>
     <div class="panel-body" id="panel-body">
         <section>
-            <h2>View</h2>
-            <div class="seg" role="group" aria-label="View mode">
-                <button id="mode-2d" aria-pressed="false">2D</button>
-                <button id="mode-3d" aria-pressed="true">3D</button>
-            </div>
-            <label class="range">Height exaggeration <output id="exag-val">1.5×</output>
-                <input autocomplete="off" type="range" id="exag" min="1" max="4" step="0.1" value="1.5">
-            </label>
-            <label class="range">Rotate <output id="bearing-val">0°</output>
-                <input autocomplete="off" type="range" id="bearing" min="-180" max="180" step="1" value="0">
-            </label>
-            <label class="range">Tilt <output id="pitch-val">0°</output>
-                <input autocomplete="off" type="range" id="pitch" min="0" max="85" step="1" value="0">
-            </label>
-            <div class="rotate" role="group" aria-label="Rotate the map">
-                <button type="button" id="rot-left" aria-label="Rotate 90 degrees left">↺ 90°</button>
-                <button type="button" id="rot-right" aria-label="Rotate 90 degrees right">↻ 90°</button>
-                <button type="button" id="rot-north">North up</button>
-                <button type="button" id="rot-spin" aria-pressed="false">Spin</button>
-            </div>
-        </section>
-        <section>
             <h2>Visualization</h2>
             <div class="viz" id="viz" role="radiogroup" aria-label="Visualization type"></div>
             <label class="check" id="color-wrap"><input autocomplete="off" type="checkbox" id="viz-color" checked> Colour by height</label>
             <div class="legend" id="legend"></div>
             <label class="check"><input autocomplete="off" type="checkbox" id="lyr-border" checked> National border</label>
-            <div class="sub">
-                <p class="sub-head">Light</p>
-                <div class="seg" role="group" aria-label="Light">
-                    <button type="button" id="light-nw" aria-pressed="true">North-west</button>
-                    <button type="button" id="light-sun" aria-pressed="false">Real sun</button>
-                </div>
-                <div class="sun-controls" id="sun-controls" hidden>
-                    <div class="year">Year <input autocomplete="off" type="number" id="sun-year" min="1900" max="2100" step="1" inputmode="numeric"></div>
-                    <label class="range">Date <output id="sun-date-val"></output>
-                        <input autocomplete="off" type="range" id="sun-day" min="0" max="364" step="1" value="0">
-                    </label>
-                    <label class="range">Time (Nepal) <output id="sun-time">12:00</output>
-                        <input autocomplete="off" type="range" id="sun-hour" min="0" max="24" step="0.25" value="12">
-                    </label>
-                    <p class="hint" id="sun-info"></p>
-                    <p class="legend-note">Shading follows the sun as you drag; shadows cast by ridges appear when you let go.</p>
-                </div>
-            </div>
             <div class="sub">
                 <label class="check"><input autocomplete="off" type="checkbox" id="peaks-on" aria-controls="peak-controls"> Show peaks</label>
                 <div class="sub-body" id="peak-controls" hidden>

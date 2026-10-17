@@ -30,7 +30,8 @@ const DATA_BOUNDS = [79.79, 26.08, 88.3, 30.81];
 const params = new URLSearchParams(location.search);
 let viz = VIZ[params.get('viz')] ? params.get('viz') : 'hillshade';
 let colorOn = params.get('color') !== '0';  // hillshade coloured by height (the old "color-hillshade" view)
-let light = 'nw';                          // 'nw': fixed light from the north-west; 'sun': the real sun, with cast shadows
+let light = 'nw';      // 'nw': a fixed direction, below; 'sun': the real sun for a date and time, with cast shadows
+let fixedAz = 315;     // the Swiss convention, from the north-west
 
 const nepal = await loadNepal();
 const style = terrainStyle(nepal, {theme: THEMES[currentTheme()]});
@@ -180,6 +181,13 @@ $('pitch').oninput = e => {
 $('rot-left').onclick = () => { stopSpin(); map.easeTo({bearing: map.getBearing() - 90, duration: 900}); };
 $('rot-right').onclick = () => { stopSpin(); map.easeTo({bearing: map.getBearing() + 90, duration: 900}); };
 $('rot-north').onclick = () => { stopSpin(); map.easeTo({bearing: 0, duration: 900}); };
+$('tilt-flat').onclick = () => setMode(false);
+for (const [id, deg] of [['tilt-45', 45], ['tilt-65', 65], ['tilt-max', 85]]) {
+    $(id).onclick = () => {
+        if (!map.getTerrain()) setMode(true, false);
+        map.easeTo({pitch: deg, duration: 700});
+    };
+}
 $('rot-spin').onclick = () => {
     if (spinning) return stopSpin();
     spinning = true;
@@ -187,6 +195,27 @@ $('rot-spin').onclick = () => {
     spinStep();
 };
 for (const ev of ['mousedown', 'touchstart', 'wheel']) map.getCanvas().addEventListener(ev, stopSpin, {passive: true});
+
+// The View and Light popups. Each control lives in one place only, so there is nothing to keep in step, and
+// opening one closes the other.
+const POPUPS = {view: 'view-popup', sun: 'sun-popup'};
+
+function showPopup(which) {
+    for (const [name, id] of Object.entries(POPUPS)) {
+        $(id).hidden = name !== which;
+        $(`${name}-toggle`).setAttribute('aria-expanded', name === which);
+    }
+}
+
+for (const [name, id] of Object.entries(POPUPS)) {
+    $(`${name}-toggle`).onclick = e => {
+        e.stopPropagation();
+        showPopup($(id).hidden ? name : null);
+    };
+    $(id).onclick = e => e.stopPropagation();
+}
+document.addEventListener('click', () => showPopup(null));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') showPopup(null); });
 
 // Visualization picker and legend
 
@@ -335,15 +364,15 @@ function lightShading() {
     }
     const day = sun && sun.altitude > 0;
     map.setPaintProperty('hillshade', 'hillshade-method', day ? 'basic' : 'standard');
-    map.setPaintProperty('hillshade', 'hillshade-illumination-direction', day ? sun.azimuth : 315);
+    map.setPaintProperty('hillshade', 'hillshade-illumination-direction', day ? sun.azimuth : fixedAz);
     map.setPaintProperty('hillshade', 'hillshade-illumination-altitude', day ? Math.max(2, sun.altitude) : 45);
     map.setLayoutProperty('night', 'visibility', sun && !day ? 'visible' : 'none');
     return sun;
 }
 
-// Cast shadows for the current sun: after the slider is let go, the date changes or the map stops moving.
-function castShadows() {
-    const sun = lightShading();
+// The tiles that follow the sun: the cast shadows, and Swiss relief, which does its own shading.
+function castShadowTiles() {
+    const sun = light === 'sun' ? sunNow() : null;
     const on = !!sun && sun.altitude > 0;
     if (on) {
         // Rounded so small changes reuse tiles already made.
@@ -354,8 +383,7 @@ function castShadows() {
         }
     }
     map.setLayoutProperty('shadow', 'visibility', on && viz !== 'swiss' ? 'visible' : 'none');
-    // Swiss relief does its own shading, so it follows the light direction itself.
-    const swissUrl = `derive://swiss/{z}/{x}/{y}?az=${on ? Math.round(sun.azimuth) : 315}&alt=${on ? Math.round(sun.altitude) : 45}`;
+    const swissUrl = `derive://swiss/{z}/{x}/{y}?az=${on ? Math.round(sun.azimuth) : fixedAz}&alt=${on ? Math.round(sun.altitude) : 45}`;
     if (swissUrl !== swissTiles) {
         swissTiles = swissUrl;
         map.getSource('derive-swiss').setTiles([swissUrl]);
@@ -363,24 +391,99 @@ function castShadows() {
     redrawDrape(map);
 }
 
+// After the slider is let go, the light changes or the map stops moving.
+function castShadows() {
+    lightShading();
+    castShadowTiles();
+}
+
 function setLight(next) {
     light = next;
     $('light-nw').setAttribute('aria-pressed', light === 'nw');
     $('light-sun').setAttribute('aria-pressed', light === 'sun');
     $('sun-controls').hidden = light !== 'sun';
+    for (const b of $('sun-popup').querySelectorAll('[data-az]')) {
+        b.setAttribute('aria-pressed', light === 'nw' && +b.dataset.az === fixedAz);
+    }
     setViz(viz);
     castShadows();
 }
 
-$('light-nw').onclick = () => setLight('nw');
+// A fixed direction to light from, the way a printed map is lit.
+for (const b of document.querySelectorAll('[data-az]')) {
+    b.onclick = () => {
+        stopPlay();
+        fixedAz = +b.dataset.az;
+        setLight('nw');
+    };
+}
+
+// Times of day, for the real sun.
+for (const b of document.querySelectorAll('[data-hour]')) {
+    b.onclick = () => {
+        stopPlay();
+        if (light !== 'sun') setLight('sun');
+        $('sun-hour').value = b.dataset.hour;
+        castShadows();
+    };
+}
+
+$('light-nw').onclick = () => { stopPlay(); setLight('nw'); };
 $('light-sun').onclick = () => setLight('sun');
-$('sun-year').onchange = e => { setYear(+e.target.value); castShadows(); };
+$('sun-year').onchange = e => { stopPlay(); setYear(+e.target.value); castShadows(); };
 for (const id of ['sun-hour', 'sun-day']) {
     $(id).oninput = () => {
+        stopPlay();
         map.setLayoutProperty('shadow', 'visibility', 'none');  // the old shadows are wrong while the sun moves
         lightShading();
     };
     $(id).onchange = castShadows;
+}
+
+// Playing a day or a year. The hillshade follows the sun on the graphics card, which costs nothing, so the
+// slider can run at the screen's own rate. The cast shadows and Swiss relief are tiles, so they are rebuilt a
+// few times a second while playing and once more when it stops, which is what dragging the slider already did.
+const PLAY = {
+    hour: {slider: 'sun-hour', per: 4},   // hours of sun per second of watching: a day in 6 s
+    day: {slider: 'sun-day', per: 12},    // days per second: a year in about 30 s
+};
+let playing = null, playFrom = 0, playAt = 0, playTiles = 0;
+
+function stopPlay() {
+    if (!playing) return;
+    const was = playing;
+    playing = null;
+    $(`play-${was}`).setAttribute('aria-pressed', false);
+    castShadows();
+}
+
+function step(now) {
+    if (!playing) return;
+    const {slider, per} = PLAY[playing];
+    const el = $(slider);
+    const lo = +el.min, hi = +el.max;
+    const value = lo + (playFrom - lo + per * (now - playAt) / 1000) % (hi - lo + Number(el.step));
+    el.value = value;
+    lightShading();
+    if (now - playTiles > 400) {   // the heavier tiles, a few times a second
+        playTiles = now;
+        castShadowTiles();
+    }
+    requestAnimationFrame(step);
+}
+
+for (const [name, {slider}] of Object.entries(PLAY)) {
+    $(`play-${name}`).onclick = () => {
+        const again = playing === name;
+        stopPlay();
+        if (again) return;
+        if (light !== 'sun') setLight('sun');
+        playing = name;
+        playFrom = +$(slider).value;
+        playAt = playTiles = performance.now();
+        $(`play-${name}`).setAttribute('aria-pressed', true);
+        requestAnimationFrame(step);
+    };
 }
 map.on('moveend', () => { if (light === 'sun') castShadows(); });
 
