@@ -44,7 +44,7 @@ async function onGpu(m) {
     const {kind, z, x, y, az, alt} = m;
     const fine = await neighbours(z, x, y);
     if (!fine[4]) return null;               // no centre tile means no terrain here
-    if (kind === 'swiss') return swissOnGpu(fine, az, alt, pixelSize(z, y));
+    if (kind === 'swiss') return swissOnGpu(fine, az, alt, pixelSize(z, y), z);
     if (alt <= 0) return null;               // the sun is down: nothing casts
     // Long shadows come from two zooms out, where a ridge tens of kilometres away still reaches.
     const zc = Math.max(5, z - 2), k = 2 ** (z - zc), cx = x >> (z - zc), cy = y >> (z - zc);

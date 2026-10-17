@@ -4,10 +4,10 @@
 // the newest request first, and a tile scrolled away before its turn is dropped. Tiles that share a coarser
 // parent go to the same worker, so its cache of decoded heights is reused.
 
-import {DERIVED, SHADE_ALT, TILE_SIZE, aspectColor, compass, derivedAt as derivedAtWith, horn, sunPosition} from './dem.js';
+import {DERIVED, SHADE_ALT, TILE_SIZE, aspectColor, compass, derivedAt as derivedAtWith, horn, sunPosition, swissWeights} from './dem.js';
 import {tileHeights} from './terrain.js';
 
-export {DERIVED, SHADE_ALT, aspectColor, compass, horn, sunPosition};
+export {DERIVED, SHADE_ALT, aspectColor, compass, horn, sunPosition, swissWeights};
 
 const SIZE = Math.max(2, Math.min(6, (navigator.hardwareConcurrency || 4) - 1));
 const queue = [];

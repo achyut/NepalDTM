@@ -9,7 +9,7 @@
 // underneath and the edge cache all work as before. dem.js stays as the fallback where WebGL2 is missing, and
 // it still answers the readout under the cursor, which needs exact numbers rather than pixels.
 
-import {SHADE_ALT} from './dem.js';
+import {SHADE_ALT, swissWeights} from './dem.js';
 
 const N = 256;
 const GRID = 3 * N; // the tile plus its eight neighbours
@@ -37,19 +37,44 @@ precision highp float;
 in vec2 uv;
 out vec4 colour;
 uniform sampler2D grid;
-uniform vec3 sun;          // unit vector towards the sun: east, north, up
+uniform float az;          // where the light comes from, degrees from north
+uniform float alt;         // how high it stands, degrees
 uniform float flatShade;   // what lambert gives on flat ground
 uniform float px;          // pixel width in metres
+uniform vec3 weights;      // how much of the shading the 1, 5 and 15 pixel gradients carry
 ${DECODE}
 
-float lambert(float dzdx, float dzdn) {
+const float RAD = 3.14159265 / 180.0;
+const float LOCAL = 18.0;  // pixels: the width of landform the light is steered by
+const float TURN = 35.0;   // degrees: how far the light may turn from the chosen direction
+const float FOLLOW = 0.6;  // how much of the way it turns
+
+float lambert(float dzdx, float dzdn, vec3 sun) {
     vec3 n = normalize(vec3(-dzdx, -dzdn, 1.0));
     return max(0.0, dot(n, sun));
 }
 
 void main() {
     ivec2 p = ivec2(uv * float(${N})) + ivec2(${N});
-    const float w[3] = float[3](0.27, 0.37, 0.36);
+
+    // Cartographers do not light a whole sheet from one direction: they turn the light landform by landform so
+    // each major slope catches it. Here a broad slope steers the light towards itself, by at most TURN degrees
+    // so the chosen direction still governs the scene. Jenny et al., Cartographic Relief Shading with Neural
+    // Networks (2020), name this among the practices their network learned from hand-drawn Swiss relief.
+    int wide = int(LOCAL);
+    float bspan = 2.0 * LOCAL * px;
+    float bx = (heightAt(grid, p + ivec2(wide, 0)) - heightAt(grid, p - ivec2(wide, 0))) / bspan;
+    float bn = -(heightAt(grid, p + ivec2(0, wide)) - heightAt(grid, p - ivec2(0, wide))) / bspan;
+    float localAz = az;
+    if (length(vec2(bx, bn)) > 0.02) {              // flat ground has no direction worth following
+        float facing = degrees(atan(-bx, -bn));     // the way the broad slope looks, from north
+        float turn = mod(facing - az + 540.0, 360.0) - 180.0;
+        localAz = az + clamp(turn, -TURN, TURN) * FOLLOW;
+    }
+    float a = localAz * RAD, e = alt * RAD;
+    vec3 sun = vec3(sin(a) * cos(e), cos(a) * cos(e), sin(e));
+
+    float w[3] = float[3](weights.x, weights.y, weights.z);
     const int steps[3] = int[3](1, 5, 15);
     float shade = 0.0;
     for (int k = 0; k < 3; k++) {
@@ -57,7 +82,7 @@ void main() {
         float span = 2.0 * float(d) * px;
         float dzdx = (heightAt(grid, p + ivec2(d, 0)) - heightAt(grid, p - ivec2(d, 0))) / span;
         float dzdn = -(heightAt(grid, p + ivec2(0, d)) - heightAt(grid, p - ivec2(0, d))) / span;
-        shade += w[k] * lambert(dzdx, dzdn);
+        shade += w[k] * lambert(dzdx, dzdn, sun);
     }
     // Lambert leaves more room below flat ground than above it, so stretch each side to -1..+1.
     float lit = shade >= flatShade ? (shade - flatShade) / (1.0 - flatShade)
@@ -212,17 +237,19 @@ function draw(program, uniforms) {
     return canvas.transferToImageBitmap();
 }
 
-export function swissOnGpu(tiles, az, alt, px) {
+export function swissOnGpu(tiles, az, alt, px, zoom) {
     const {gl, programs} = gpu;
     upload(0, tiles);
     // The same cartographic sun height as the CPU path: a near-overhead sun leaves the relief no contrast.
-    const a = az * Math.PI / 180, e = Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], alt)) * Math.PI / 180;
-    const su = Math.sin(e);
+    const useAlt = Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], alt));
+    const w = swissWeights(zoom);
     return draw(programs.swiss, {
         grid: l => gl.uniform1i(l, 0),
-        sun: l => gl.uniform3f(l, Math.sin(a) * Math.cos(e), Math.cos(a) * Math.cos(e), su),
-        flatShade: l => gl.uniform1f(l, su),
+        az: l => gl.uniform1f(l, az),
+        alt: l => gl.uniform1f(l, useAlt),
+        flatShade: l => gl.uniform1f(l, Math.sin(useAlt * Math.PI / 180)),
         px: l => gl.uniform1f(l, px),
+        weights: l => gl.uniform3f(l, w[0], w[1], w[2]),
     });
 }
 

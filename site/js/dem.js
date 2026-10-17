@@ -263,6 +263,12 @@ function nearRay({H, G, top}, x, y, sx, sy, rise, steps, soft) {
 // The sun height the shading is drawn with, whatever the real one is. See renderSwiss.
 export const SHADE_ALT = [35, 50];
 
+// Blend between generalised and detailed as the map is zoomed, so each scale shows the detail it can carry.
+export function swissWeights(zoom = TILE_MAX_ZOOM) {
+    const t = Math.max(0, Math.min(1, (zoom - 10) / 3));
+    return SWISS.broad.map((b, i) => b + (SWISS.fine[i] - b) * t);
+}
+
 const SHADOW = [16, 26, 54], SHADOW_ALPHA = 0.5;
 
 // Swiss relief, after the hand-drawn tradition of Imhof and the four ideas behind Eduard
@@ -278,8 +284,13 @@ const SHADOW = [16, 26, 54], SHADOW_ALPHA = 0.5;
 // Returned as a see-through overlay drawn over whatever colour layer is beneath, so the page's "colour by
 // height" choice decides between grey relief and hypsometric tints.
 const SWISS = {
-    weight: [0.27, 0.37, 0.36],        // weight on the 1, 5 and 15 pixel gradients
     steps: [1, 5, 15],
+    // How much of the shading each width of landform carries. Zoomed out, a map shows the big forms and drops
+    // what is too fine to read at that scale; zoomed in, the fine detail is the subject. These are the two
+    // ends, blended between zoom 10 and 13.
+    broad: [0.15, 0.32, 0.53],         // zoom 10 and below
+    fine: [0.42, 0.36, 0.22],          // zoom 13 and above
+    local: 18, turn: 35, follow: 0.6,  // steering the light: window, limit in degrees, how far it follows
     shadow: [44, 56, 78], sun: [255, 253, 243], haze: [186, 201, 217],
     ridge: 0.22,                       // crest brightening
     shadowMax: 0.68, sunMax: 0.5,      // strongest shading either way
@@ -296,24 +307,38 @@ export async function renderSwiss(tileHeights, z, x, y, az, alt) {
     if (!(await tileHeights(z, x, y))) return null;
     const {H, G} = await grid3(tileHeights, z, x, y);
     const px = pixelSize(z, y);
+    const weight = swissWeights(z);
     // The shading keeps a cartographic sun height and only follows the real direction. A high sun leaves no
     // room: at 85 degrees nothing can be brighter than flat ground, because every slope tilts away from it,
     // so a midday scene washes out. Imhof's relief is lit from about 45 degrees whatever the hour.
-    const a = az * Math.PI / 180, e = Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], alt)) * Math.PI / 180;
-    const se = Math.sin(a) * Math.cos(e), sn = Math.cos(a) * Math.cos(e), su = Math.sin(e);
-    const flat = lambert(0, 0, se, sn, su);
-    const wide = SWISS.steps[2];
+    const e = Math.min(SHADE_ALT[1], Math.max(SHADE_ALT[0], alt)) * Math.PI / 180;
+    const cosE = Math.cos(e), su = Math.sin(e);
+    const flat = su;
+    const wide = SWISS.steps[2], near = SWISS.local;
     const out = new Uint8ClampedArray(N * N * 4);
 
     for (let j = 0; j < N; j++) {
         for (let i = 0; i < N; i++) {
             const r = (N + j) * G + N + i;
+            // The light turns towards a broad slope so each landform catches it, limited so the chosen
+            // direction still governs the scene. See the shader in gpu.js for the reasoning.
+            const bspan = 2 * near * px;
+            const bx = (H[r + near] - H[r - near]) / bspan;
+            const bn = -(H[r + near * G] - H[r - near * G]) / bspan;
+            let localAz = az;
+            if (Math.hypot(bx, bn) > 0.02) {
+                const facing = Math.atan2(-bx, -bn) * 180 / Math.PI;
+                const turn = (facing - az + 540) % 360 - 180;
+                localAz = az + Math.max(-SWISS.turn, Math.min(SWISS.turn, turn)) * SWISS.follow;
+            }
+            const la = localAz * Math.PI / 180;
+            const se = Math.sin(la) * cosE, sn = Math.cos(la) * cosE;
             let shade = 0;
             for (let k = 0; k < 3; k++) {
                 const d = SWISS.steps[k], span = 2 * d * px;
                 const dzdx = (H[r + d] - H[r - d]) / span;
                 const dzdn = -(H[r + d * G] - H[r - d * G]) / span;  // grid rows run south
-                shade += SWISS.weight[k] * lambert(dzdx, dzdn, se, sn, su);
+                shade += weight[k] * lambert(dzdx, dzdn, se, sn, su);
             }
             // Lambert leaves far more room below flat ground than above it, so stretch each side to -1..+1
             // before shading; otherwise the shadows swamp the highlights.
