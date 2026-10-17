@@ -12,11 +12,13 @@
 const N = 256;
 const GRID = 3 * N; // the tile plus its eight neighbours
 
+// The card draws vertex y = +1 at the top of the output, while texture row 0 is the tile's north edge, so uv.y
+// is flipped: without this each tile comes out upside down and every tile edge shows as a horizontal line.
 const VERTEX = `#version 300 es
 in vec2 pos;
 out vec2 uv;
 void main() {
-    uv = pos;
+    uv = vec2(pos.x, 1.0 - pos.y);
     gl_Position = vec4(pos * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
