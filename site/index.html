@@ -46,7 +46,7 @@
                 <a class="btn primary" href="/map">Explore the map
                     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
                 <a class="btn ghost" href="#data">Download data</a>
-                <a class="btn ghost" href="/paper/paper.pdf">Read the paper</a>
+                <a class="btn ghost" href="/paper/paper_v2.pdf">Read the paper</a>
             </div>
         </div>
     </div>
@@ -59,6 +59,9 @@
         <div class="stat"><b>{{rmse_gain}}<small>%</small></b><span>lower error than Copernicus GLO-30 ({{rmse_cop}} m)</span></div>
         <div class="stat"><b>{{bias}}<small>m</small></b><span>bias, against {{bias_cop}} m for Copernicus</span></div>
         <div class="stat"><b>{{km2}}<small>km²</small></b><span>covered in {{tiles}} tiles of 24 × 24 km</span></div>
+        <p class="stats-note">Figures above are for v1 (October 2026). v2 (November 2026) brings the held-out ICESat-2
+            RMSE to 5.26 m, against 8.69 m for Copernicus GLO-30, by jointly adjusting the stereo strips to ICESat-2
+            photons. <a href="/paper/paper_v2.pdf">v2 paper</a> · <a href="/map">both versions on the map</a></p>
     </div>
 </section>
 
@@ -196,9 +199,13 @@ curl -O https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif</code></pre>
         <div>
             <p class="kicker">Paper</p>
             <h2 class="title">Method and full validation</h2>
+            <a class="doc" href="/paper/paper_v2.pdf">
+                <svg viewBox="0 0 34 40" aria-hidden="true"><path d="M2 2h20l10 10v26H2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 2v10h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <div><b>NepalDTM v2: strip adjustment to ICESat-2 photons</b><span>Paper · PDF · November 2026</span></div>
+            </a>
             <a class="doc" href="/paper/paper.pdf">
                 <svg viewBox="0 0 34 40" aria-hidden="true"><path d="M2 2h20l10 10v26H2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 2v10h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                <div><b>NepalDTM: A National 8-Metre Bare-Earth DTM of Nepal</b><span>Paper · PDF</span></div>
+                <div><b>NepalDTM: A National 8-Metre Bare-Earth DTM of Nepal</b><span>Paper · PDF · v1, October 2026</span></div>
             </a>
             <a class="doc" href="/paper/whitepaper.pdf">
                 <svg viewBox="0 0 34 40" aria-hidden="true"><path d="M2 2h20l10 10v26H2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 2v10h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>

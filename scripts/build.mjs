@@ -82,7 +82,7 @@ values.accuracy_table = '<div class="table-scroll"><table><thead><tr><th>Group</
 rmSync(DIST, {recursive: true, force: true});
 cpSync(join(ROOT, 'site'), DIST, {recursive: true});
 mkdirSync(join(DIST, 'paper'), {recursive: true});
-for (const f of ['paper.pdf', 'whitepaper.pdf']) cpSync(join(ROOT, 'paper', f), join(DIST, 'paper', f));
+for (const f of ['paper.pdf', 'paper_v2.pdf', 'whitepaper.pdf']) cpSync(join(ROOT, 'paper', f), join(DIST, 'paper', f));
 
 for (const f of readdirSync(DIST).filter(f => f.endsWith('.html'))) {
     const p = join(DIST, f);

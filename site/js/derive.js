@@ -5,7 +5,7 @@
 // parent go to the same worker, so its cache of decoded heights is reused.
 
 import {DERIVED, SHADE_ALT, TILE_SIZE, aspectColor, compass, derivedAt as derivedAtWith, horn, sunPosition, swissWeights} from './dem.js';
-import {tileHeights} from './terrain.js';
+import {VERSION, VERSIONS, tileHeights} from './terrain.js';
 
 export {DERIVED, SHADE_ALT, aspectColor, compass, horn, sunPosition, swissWeights};
 
@@ -16,7 +16,7 @@ let nextId = 1;
 
 const workers = Array.from({length: SIZE}, () => {
     const w = new Worker(new URL('./derive-worker.js', import.meta.url), {type: 'module'});
-    w.postMessage({type: 'init', origin: location.origin});
+    w.postMessage({type: 'init', origin: location.origin, tiles: VERSIONS[VERSION].tiles});
     w.job = null;
     w.lastKey = '';
     w.onmessage = ({data}) => {

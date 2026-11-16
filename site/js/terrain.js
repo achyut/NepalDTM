@@ -8,10 +8,18 @@ import {stopsFor} from './palettes.js';
 export {TILE_MAX_ZOOM}; // highest zoom in the archive, about 8.4 m per pixel over Nepal
 
 export const DATA_URL = 'https://nepaldtm-data.achyutpdl.com';
+// Two releases of the model. ?v=1 shows the first (October 2026); anything else shows v2, whose stereo strips
+// are jointly adjusted to ICESat-2 photons. Each has its own tile archive behind the worker and its own 8 m COGs.
+export const VERSIONS = {
+    1: {label: 'v1', date: 'Oct 2026', tiles: '/tiles', cog: `${DATA_URL}/cog`},
+    2: {label: 'v2', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`},
+};
+export const VERSION = new URLSearchParams(location.search).get('v') === '1' ? 1 : 2;
+export const COG_URL = VERSIONS[VERSION].cog;
 // Tiles come from this site's own worker, which reads the archive in R2 and lets Cloudflare cache each tile
 // at the edge. Reading byte ranges from the 3 GB archive missed that cache on every single tile.
-export const TILE_URL = '/tiles/{z}/{x}/{y}.webp';
-export const tileUrl = (z, x, y) => `/tiles/${z}/${x}/${y}.webp`;
+export const TILE_URL = `${VERSIONS[VERSION].tiles}/{z}/{x}/{y}.webp`;
+export const tileUrl = (z, x, y) => `${VERSIONS[VERSION].tiles}/${z}/${x}/${y}.webp`;
 export const NEPAL_BOUNDS = [[80.06, 26.35], [88.2, 30.45]];
 // The frame the map may be panned and zoomed out to: Nepal's box plus 50 km of its neighbours north and
 // south, and 175 km east and west, which is what it takes for the whole country to fit beside the panel.

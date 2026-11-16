@@ -1,4 +1,5 @@
-// Serves the terrain tiles at /tiles/{z}/{x}/{y}.webp, and everything else from the built site.
+// Serves the terrain tiles at /tiles/{z}/{x}/{y}.webp (v1) and /tiles/v2/{z}/{x}/{y}.webp (v2), and everything
+// else from the built site.
 //
 // The map used to read byte ranges out of the 3 GB PMTiles archive directly. Cloudflare will not hold ranges
 // of an object that size in its edge cache, so every tile travelled to R2 storage and came back in about
@@ -9,8 +10,9 @@
 
 import { PMTiles } from "pmtiles";
 
-const ARCHIVE = "NepalDTM.webp.pmtiles";
-const TILE_PATH = /^\/tiles\/(\d+)\/(\d+)\/(\d+)\.webp$/;
+// One archive per model version, both in the same bucket.
+const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles" };
+const TILE_PATH = /^\/tiles\/(?:v(2)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
 // One R2 object, read in ranges. The archive's own directories are small and the PMTiles client keeps them,
@@ -32,13 +34,13 @@ class R2Source {
   }
 }
 
-// The archive is immutable, so its directory cache is shared across requests in this isolate rather than
-// rebuilt each time. It holds no request state.
-let archive;
+// The archives are immutable, so their directory caches are shared across requests in this isolate rather than
+// rebuilt each time. They hold no request state.
+const archives = {};
 
-function open(env) {
-  archive ??= new PMTiles(new R2Source(env.TILES, ARCHIVE));
-  return archive;
+function open(env, version) {
+  archives[version] ??= new PMTiles(new R2Source(env.TILES, ARCHIVES[version]));
+  return archives[version];
 }
 
 export default {
@@ -54,17 +56,17 @@ export default {
     const hit = await cache.match(request);
     if (hit) return hit;
 
-    const [, z, x, y] = tile;
+    const [, v2, z, x, y] = tile;
     let response;
     try {
-      const result = await open(env).getZxy(Number(z), Number(x), Number(y));
+      const result = await open(env, v2 ? 2 : 1).getZxy(Number(z), Number(x), Number(y));
       // Tiles are left out where there is no terrain. A 404 says so and, unlike a 204, the cache will hold
       // it, so the empty ground around Nepal costs one lookup rather than one per visit.
       response = result
         ? new Response(result.data, { headers: { "content-type": "image/webp", "cache-control": IMMUTABLE } })
         : new Response("", { status: 404, headers: { "cache-control": IMMUTABLE } });
     } catch (err) {
-      console.error({ message: "tile read failed", tile: `${z}/${x}/${y}`, error: String(err) });
+      console.error({ message: "tile read failed", tile: `${v2 ? "v2/" : ""}${z}/${x}/${y}`, error: String(err) });
       return new Response("Tile unavailable", { status: 502, headers: { "cache-control": "no-store" } });
     }
 

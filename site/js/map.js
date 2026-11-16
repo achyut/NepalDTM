@@ -1,4 +1,4 @@
-import {DATA_URL, MAX_BOUNDS, NEPAL_BOUNDS, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNeighbours, loadNepal,
+import {COG_URL, VERSION, VERSIONS, MAX_BOUNDS, NEPAL_BOUNDS, THEMES, TILE_MAX_ZOOM, applyTheme, elevationAt, fmtM, inNepal, loadNeighbours, loadNepal,
     redrawDrape, reliefStops, terrainStyle} from './terrain.js';
 import {PALETTES, rememberPalette, stopsFor, storedPalette} from './palettes.js';
 import {DERIVED, SHADE_ALT, aspectColor, compass, derivedAt, derivedSource, horn, sunPosition} from './derive.js';
@@ -884,7 +884,7 @@ function tileName(e, n) {
 
 function cog(file) {
     if (!images.has(file)) {
-        images.set(file, GeoTIFF.fromUrl(`${DATA_URL}/cog/${file}`).then(t => t.getImage()).catch(() => null));
+        images.set(file, GeoTIFF.fromUrl(`${COG_URL}/${file}`).then(t => t.getImage()).catch(() => null));
     }
     return images.get(file);
 }
@@ -951,7 +951,7 @@ async function inspect(ll, peak) {
     if (err != null) rows.push(['Expected error', err >= 255 ? '≥ 25.5 m' : `±${(err / 10).toFixed(1)} m`]);
     if (source != null) rows.push(['Source', source === 1 ? '<span class="tag hma">HMA 8 m stereo</span>'
                                           : '<span class="tag fill">Copernicus 30 m fill</span>']);
-    const links = ['dtm', 'dem', 'aux'].map(k => `<a href="${DATA_URL}/cog/${name}_${k}.tif">${k}</a>`).join(' · ');
+    const links = ['dtm', 'dem', 'aux'].map(k => `<a href="${COG_URL}/${name}_${k}.tif">${k}</a>`).join(' · ');
     $('inspect-body').innerHTML = `<p class="ll">${fmtLL(ll)}</p>` +
         (rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`
                      : '<p>No value at this point.</p>') +
@@ -1085,5 +1085,27 @@ function renderChart(data, length, min, max, km) {
         $('pc-line').setAttribute('visibility', 'hidden');
         $('pc-label').setAttribute('visibility', 'hidden');
         hoverMarker.remove();
+    };
+}
+
+// Model version. Switching reloads the page with ?v=: the tile caches, workers and terrain source are all built
+// for one archive, and the URL already carries the view (hash) and the visualization, so nothing is lost.
+const VERSION_NOTES = {
+    1: ['v1: held-out ICESat-2 RMSE 6.9 m (Copernicus 8.7 m).',
+        '37% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.'],
+    2: ['v2: held-out ICESat-2 RMSE 5.3 m (Copernicus 8.7 m). Stereo strips are jointly adjusted to ICESat-2 photons.',
+        '39% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.'],
+};
+$('ver-note').textContent = VERSION_NOTES[VERSION][0];
+$('ver-fine').textContent = 'Map tiles go to 8.4 m per pixel (zoom 14). Clicking reads the full-resolution 8 m files of '
+    + `${VERSIONS[VERSION].label}. ${VERSION_NOTES[VERSION][1]}`;
+for (const v of [1, 2]) {
+    const b = $(`ver-${v}`);
+    b.setAttribute('aria-pressed', String(v === VERSION));
+    b.onclick = () => {
+        if (v === VERSION) return;
+        const url = new URL(location.href);
+        if (v === 2) url.searchParams.delete('v'); else url.searchParams.set('v', String(v));
+        location.assign(url);
     };
 }

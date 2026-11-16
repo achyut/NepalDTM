@@ -119,6 +119,14 @@
     </button>
     <div class="panel-body" id="panel-body">
         <section>
+            <h2>Model version</h2>
+            <div class="seg" role="group" aria-label="Model version">
+                <button type="button" id="ver-2" aria-pressed="true">v2 · Nov</button>
+                <button type="button" id="ver-1" aria-pressed="false">v1 · Oct</button>
+            </div>
+            <p class="hint" id="ver-note"></p>
+        </section>
+        <section>
             <h2>Visualization</h2>
             <div class="viz" id="viz" role="radiogroup" aria-label="Visualization type"></div>
             <label class="check" id="color-wrap"><input autocomplete="off" type="checkbox" id="viz-color" checked> Colour by height</label>
@@ -149,7 +157,7 @@
             </button>
             <p class="hint" id="tool-hint">Click anywhere in Nepal for the exact 8 m values at that spot.</p>
         </section>
-        <p class="fine">Map tiles go to 8.4 m per pixel (zoom 14). Clicking reads the full-resolution 8 m files.
+        <p class="fine" id="ver-fine">Map tiles go to 8.4 m per pixel (zoom 14). Clicking reads the full-resolution 8 m files.
             37% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.</p>
     </div>
 </aside>

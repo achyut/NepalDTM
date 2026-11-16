@@ -17,7 +17,7 @@ const neighbours = (z, x, y) =>
 
 self.onmessage = async ({data: m}) => {
     if (m.type === 'init') {
-        const url = (z, x, y) => `${m.origin}/tiles/${z}/${x}/${y}.webp`;
+        const url = (z, x, y) => `${m.origin}${m.tiles ?? '/tiles'}/${z}/${x}/${y}.webp`;
         tileHeights = heightSource(url, 500);
         tileBitmap = bitmapSource(url, 500);
         gpu = initGpu();
