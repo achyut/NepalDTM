@@ -1109,3 +1109,11 @@ for (const v of [1, 2]) {
         location.assign(url);
     };
 }
+
+// Data and Paper menus in the top bar: one open at a time, closed by a click elsewhere or Escape.
+const menus = [...document.querySelectorAll('.vbar .dd')];
+menus.forEach(d => d.addEventListener('toggle', () => {
+    if (d.open) menus.forEach(o => { if (o !== d) o.open = false; });
+}));
+document.addEventListener('click', e => menus.forEach(d => { if (!d.contains(e.target)) d.open = false; }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') menus.forEach(d => { d.open = false; }); });

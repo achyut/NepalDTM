@@ -27,7 +27,28 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="10.5" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
         Places
     </button>
-    <nav><a href="/#data">Data</a><a href="/#paper">Paper</a></nav>
+    <nav>
+        <details class="dd">
+            <summary>Data</summary>
+            <div class="dd-menu">
+                <p class="dd-head">v2 · Nov 2026</p>
+                <a href="https://nepaldtm-data.achyutpdl.com/v2/NepalDTM_v2.webp.pmtiles">Map tiles (PMTiles · 3.0 GB)</a>
+                <a href="https://nepaldtm-data.achyutpdl.com/v2/nepal_dtm_8m_v2.vrt">Bare-earth DTM mosaic (VRT)</a>
+                <a href="https://nepaldtm-data.achyutpdl.com/v2/nepal_dem_8m_v2.vrt">Surface DEM mosaic (VRT)</a>
+                <p class="dd-head">v1 · Oct 2026</p>
+                <a href="https://nepaldtm-data.achyutpdl.com/NepalDTM.webp.pmtiles">Map tiles (PMTiles · 3.0 GB)</a>
+                <a href="/#data">All v1 downloads</a>
+            </div>
+        </details>
+        <details class="dd">
+            <summary>Paper</summary>
+            <div class="dd-menu">
+                <a href="/paper/paper_v2.pdf">v2 · strip adjustment to ICESat-2 <small>Nov 2026</small></a>
+                <a href="/paper/paper.pdf">v1 · national 8 m DTM <small>Oct 2026</small></a>
+                <a href="/paper/whitepaper.pdf">Practical guide <small>white paper</small></a>
+            </div>
+        </details>
+    </nav>
     <button class="view-toggle" type="button" id="view-toggle" aria-expanded="false" aria-controls="view-popup">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 16 9 5.5l4 6.5 2.5-3.5 6 7.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M2.5 19.5h19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         View
