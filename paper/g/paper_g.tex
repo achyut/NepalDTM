@@ -208,6 +208,7 @@ This paper reports checkpoints up to 30{,}000 of a planned 150{,}000 steps.
 \fig{fig01_training_loss}{Training loss (running mean). The run was paused and resumed at 24{,}000 steps.}{fig:loss}
 
 \subsection{Held-out lidar patches}
+\label{sec:heldout}
 Each evaluation degrades held-out patches with the error model and compares the 1~m outputs with the true lidar
 (Table~\ref{tab:heldout}, Figure~\ref{fig:heldout}).
 Each held-out patch is degraded with a fixed seed (its own index), so a given set of patches always has the same
@@ -285,6 +286,44 @@ faint 8~m grid is the artefact of Section~\ref{sec:projection}.}{fig:chitwan}
 400~m views (bottom).}{fig:churia}
 \fig{fig08_churia_detail_and_photons}{Churia hills. Left: G minus bicubic, the relief G adds below 8~m. Right: G
 minus held-out ICESat-2 ground photons along two tracks, over shaded relief of G.}{fig:churiamaps}
+
+\subsection{Comparison with other terrain models}
+\label{sec:compare}
+Table~\ref{tab:compare} scores G alongside the public global models and both NepalDTM releases, on the same
+held-out photons in the two Chitwan boxes (only photons where every product has a value).
+Copernicus GLO-30~\citep{esa2021copernicus} and FABDEM~\citep{hawker2022fabdem} are resampled bilinearly to
+the 8~m grid; GEM-15~\citep{gem15} is its 15~m DTM, converted from EGM96 to EGM2008 like the photons.
+GEDTM30 is not included: its host returned truncated byte ranges when we ran this comparison.
+
+\begin{table}[!htbp]
+\centering
+\caption{Terrain models on the same held-out ICESat-2 ground photons in the Chitwan test boxes (m; error is
+model minus photon). Best RMSE per area in bold. G is checkpoint 24{,}000.}
+\label{tab:compare}
+\begin{tabular}{lrrrrrrr}
+\toprule
+ & & \multicolumn{3}{c}{Floodplain (101{,}604 photons)} & \multicolumn{3}{c}{Churia hills (1{,}610 photons)} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+Model & Grid & RMSE & NMAD & Median & RMSE & NMAD & Median \\
+\midrule
+Copernicus GLO-30 & 30~m & 4.91 & 0.63 & $+0.48$ & 22.37 & 7.53 & $+21.96$ \\
+FABDEM V1-2 & 30~m & \textbf{1.92} & 0.55 & $+0.47$ & 11.89 & 8.13 & $+8.05$ \\
+GEM-15 DTM & 15~m & 17.13 & 1.54 & $+15.99$ & 32.05 & 6.90 & $+30.85$ \\
+NepalDTM v1~\citep{paudel2026nepaldtm} & 8~m & 2.20 & 0.45 & $+0.13$ & \textbf{10.64} & 8.99 & $+3.44$ \\
+NepalDTM v2 (M)~\citep{paudel2026nepaldtmv2} & 8~m & 2.02 & 0.44 & $+0.11$ & 11.63 & 7.93 & $+7.28$ \\
+Bicubic of M & 1~m & 2.01 & 0.44 & $+0.11$ & 11.65 & 8.44 & $+7.10$ \\
+G & 1~m & 2.02 & 0.45 & $+0.08$ & 11.67 & 8.49 & $+6.89$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+G inherits the accuracy of M: on both boxes it is within 0.04~m RMSE of M and of bicubic, and ranks with
+them. On the floodplain the three are 8--9\% better than v1 and 59\% better than Copernicus GLO-30, and
+FABDEM is 0.10~m better than all three. In the Churia hills v1 is the best, by about 1~m, because v2 there
+is Copernicus fill with a forest-canopy residual of about $+7$~m that G cannot remove
+(Section~\ref{sec:nepal}). GEM-15 sits 16--31~m above the photons in both boxes, the offset over this part
+of South Asia already seen in the v2 paper. Photon RMSE only measures height at the photons; the detail G
+adds below 8~m is assessed against lidar in Section~\ref{sec:heldout}, not here.
 
 \section{Discussion}
 \paragraph{What G is.} G is a prior on how terrain looks at 1~m, conditioned on M.
