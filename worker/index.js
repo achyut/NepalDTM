@@ -11,8 +11,8 @@
 import { PMTiles } from "pmtiles";
 
 // One archive per model version, both in the same bucket.
-const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles" };
-const TILE_PATH = /^\/tiles\/(?:v(2)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
+const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles", g: "g/NepalDTM_G_test.webp.pmtiles" };
+const TILE_PATH = /^\/tiles\/(?:(v2|g)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
 // One R2 object, read in ranges. The archive's own directories are small and the PMTiles client keeps them,
@@ -56,17 +56,18 @@ export default {
     const hit = await cache.match(request);
     if (hit) return hit;
 
-    const [, v2, z, x, y] = tile;
+    const [, which, z, x, y] = tile;
+    const version = which === "v2" ? 2 : which === "g" ? "g" : 1;
     let response;
     try {
-      const result = await open(env, v2 ? 2 : 1).getZxy(Number(z), Number(x), Number(y));
+      const result = await open(env, version).getZxy(Number(z), Number(x), Number(y));
       // Tiles are left out where there is no terrain. A 404 says so and, unlike a 204, the cache will hold
       // it, so the empty ground around Nepal costs one lookup rather than one per visit.
       response = result
         ? new Response(result.data, { headers: { "content-type": "image/webp", "cache-control": IMMUTABLE } })
         : new Response("", { status: 404, headers: { "cache-control": IMMUTABLE } });
     } catch (err) {
-      console.error({ message: "tile read failed", tile: `${v2 ? "v2/" : ""}${z}/${x}/${y}`, error: String(err) });
+      console.error({ message: "tile read failed", tile: `${which ? which + "/" : ""}${z}/${x}/${y}`, error: String(err) });
       return new Response("Tile unavailable", { status: 502, headers: { "cache-control": "no-store" } });
     }
 

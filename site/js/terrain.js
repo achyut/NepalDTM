@@ -13,8 +13,12 @@ export const DATA_URL = 'https://nepaldtm-data.achyutpdl.com';
 export const VERSIONS = {
     1: {label: 'v1', date: 'Oct 2026', tiles: '/tiles', cog: `${DATA_URL}/cog`},
     2: {label: 'v2', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`},
+    // G: v2 everywhere, plus generated 1 m detail (zooms 15-17) drawn over the test boxes. Generated, not measured.
+    g: {label: 'G 1 m (test)', date: 'test', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`,
+        detail: '/tiles/g', detailBounds: [84.449, 27.459, 84.501, 27.511]},
 };
-export const VERSION = new URLSearchParams(location.search).get('v') === '1' ? 1 : 2;
+const V = new URLSearchParams(location.search).get('v');
+export const VERSION = V === '1' ? 1 : V === 'g' ? 'g' : 2;
 export const COG_URL = VERSIONS[VERSION].cog;
 // Tiles come from this site's own worker, which reads the archive in R2 and lets Cloudflare cache each tile
 // at the edge. Reading byte ranges from the 3 GB archive missed that cache on every single tile.
@@ -155,6 +159,8 @@ export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, p
             nepal: {type: 'geojson', data: nepal},
             mask: {type: 'geojson', data: outsideMask(nepal)},
             ...(neighbours ? {neighbours: {type: 'geojson', data: neighbours}} : {}),
+            ...(VERSIONS[VERSION].detail ? {gdetail: {type: 'raster-dem', tiles: [`terrain://${VERSIONS[VERSION].detail}/{z}/{x}/{y}.webp`],
+                tileSize: TILE_SIZE, encoding: 'terrarium', minzoom: 15, maxzoom: 17, bounds: VERSIONS[VERSION].detailBounds}} : {}),
         },
         layers: [
             {id: 'background', type: 'background', paint: {'background-color': outside}},
@@ -166,6 +172,11 @@ export function terrainStyle(nepal, {exaggeration = 1.5, theme = THEMES.light, p
                      'hillshade-shadow-color': 'rgb(64, 82, 104)', 'hillshade-highlight-color': 'rgb(255, 249, 214)',
                      'hillshade-accent-color': 'rgb(88, 102, 118)', 'hillshade-illumination-direction': 315,
                      'hillshade-illumination-anchor': 'map'}},
+            // G test: shading from the generated 1 m surface, over the test boxes only, once the 8 m tiles run out.
+            ...(VERSIONS[VERSION].detail ? [{id: 'g-hillshade', type: 'hillshade', source: 'gdetail', minzoom: 14.5,
+             paint: {'hillshade-exaggeration': 0.35, 'hillshade-shadow-color': 'rgb(64, 82, 104)',
+                     'hillshade-highlight-color': 'rgb(255, 249, 214)', 'hillshade-accent-color': 'rgb(88, 102, 118)',
+                     'hillshade-illumination-direction': 315, 'hillshade-illumination-anchor': 'map'}}] : []),
             {id: 'mask', type: 'fill', source: 'mask', paint: {'fill-color': outside}},
             // Drawn over the mask, which has just painted everything outside Nepal flat.
             ...(neighbours ? [
