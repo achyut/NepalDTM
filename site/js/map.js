@@ -1095,7 +1095,7 @@ const VERSION_NOTES = {
         '37% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.'],
     2: ['v2: held-out ICESat-2 RMSE 5.3 m (Copernicus 8.7 m). Stereo strips are jointly adjusted to ICESat-2 photons.',
         '39% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.'],
-    g: ['G 1 m (test): v2 everywhere, plus generated 1 m detail over a 5 × 5.6 km test box in the Churia hills '
+    g: ['NepalDTM-G 1 m (test): v2 everywhere, plus generated 1 m detail over a 5 × 5.6 km test box in the Churia hills '
         + '(Chitwan) when zoomed past 14. The 1 m detail is generated, not measured; it keeps v2\'s accuracy there '
         + '(held-out ICESat-2 11.67 m vs 11.63 m; v2 is Copernicus fill under forest in this box).',
         'Generated detail is shown only inside the Churia test box; elsewhere this is v2.'],
