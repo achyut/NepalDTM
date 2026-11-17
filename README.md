@@ -31,7 +31,7 @@ within this table only.
 
 ## v1 results (October 2026)
 
-v1 used the High Mountain Asia 8 m stereo mosaic where it exists and Copernicus GLO-30 elsewhere (37% / 63% of the area), with a model trained on 6,230,548 ICESat-2 points and 7,035,904 GEDI points removing vegetation and buildings. The v1 paper is [`paper/paper.tex`](paper/paper.tex) and the guide [`paper/whitepaper.tex`](paper/whitepaper.tex); both quote [`validation/validation_report.json`](validation/validation_report.json).
+v1 used the High Mountain Asia 8 m stereo mosaic where it exists and Copernicus GLO-30 elsewhere (37% / 63% of the area), with a model trained on 6,230,548 ICESat-2 points and 7,035,904 GEDI points removing vegetation and buildings. The v1 paper is on EarthArXiv, https://doi.org/10.31223/X5DR5M (source [`paper/paper.tex`](paper/paper.tex)) and the guide [`paper/whitepaper.tex`](paper/whitepaper.tex); both quote [`validation/validation_report.json`](validation/validation_report.json).
 
 Spatial holdout, 4,463,463 ICESat-2 points inside Nepal:
 
@@ -99,15 +99,16 @@ Paudel, A. (2026). NepalDTM v2: Photon-controlled joint adjustment of stereo str
 }
 ```
 
-v1:
+v1 (EarthArXiv, https://doi.org/10.31223/X5DR5M):
 
 ```bibtex
 @misc{paudel2026nepaldtm,
   author       = {Paudel, Achyut},
   title        = {{NepalDTM}: A National 8-Metre Bare-Earth Digital Terrain Model of {Nepal} from Multi-Source Satellite Data Fusion},
   year         = {2026},
-  howpublished = {Preprint},
-  url          = {https://github.com/achyut/NepalDTM}
+  howpublished = {EarthArXiv preprint, version 1},
+  doi          = {10.31223/X5DR5M},
+  url          = {https://doi.org/10.31223/X5DR5M}
 }
 ```
 

@@ -33,5 +33,7 @@ references:
       - family-names: Paudel
         given-names: Achyut
     year: 2026
-    url: "https://github.com/achyut/NepalDTM"
+    doi: "10.31223/X5DR5M"
+    url: "https://doi.org/10.31223/X5DR5M"
+    journal: "EarthArXiv"
     notes: "v1 (October 2026)."
