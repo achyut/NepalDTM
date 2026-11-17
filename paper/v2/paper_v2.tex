@@ -14,6 +14,12 @@
 \usepackage[section]{placeins}  % figures and tables never float past the end of their section
 \usepackage[round,authoryear]{natbib}
 \usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0.3pt}
+\fancyhead[C]{\footnotesize This is a non-peer-reviewed preprint submitted to EarthArXiv.}
+\fancyfoot[C]{\thepage}
+\fancypagestyle{plain}{\fancyhf{}\fancyhead[C]{\footnotesize This is a non-peer-reviewed preprint submitted to EarthArXiv.}\fancyfoot[C]{\thepage}}
 
 \graphicspath{{figures/}}
 \newcommand{\pending}[1]{\textcolor{red}{\textbf{[pending: #1]}}}
@@ -24,11 +30,11 @@
   pdfauthor={Achyut Paudel}%
 }
 
-\title{NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips\\
-for a National Terrain Model of Nepal}
+\title{NepalDTM v2: Photon-Controlled Joint Adjustment\\
+of Stereo Strips for a National Terrain Model of Nepal}
 \author{Achyut Paudel\\
 \small \href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
-\date{Working draft, November 2026}
+\date{Preprint, November 2026}
 
 \begin{document}
 \maketitle
