@@ -23,12 +23,13 @@ import rasterio
 from rasterio.windows import Window
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fuse_hma import FEATURES, load_stack, terrain  # noqa: E402
+from fuse_hma import EXTRA, FEATURES, STACK_DIR, SUFFIX, load_stack, terrain  # noqa: E402
 
 DATA = Path(__file__).resolve().parent / "data"
 NW = DATA / "nw"
 BUFPX = 125  # 1 km buffer at 8 m
 CORE = 3000
+OUT = f"out{SUFFIX}"
 
 
 def cog(path, prof, a, dtype, **opt):
@@ -44,10 +45,11 @@ def cog(path, prof, a, dtype, **opt):
 def apply(path, m, u):
     prof, L = load_stack(path)
     F = {**terrain(L["dsm"]), "chm_mean": L["chm_mean"], "chm_q3": L["chm_q3"], "chm_max": L["chm_max"],
-         "wc": L["wc"], "dsm_minus_cop": L["dsm"] - L["cop"], "src": L["src"], "dsm": L["dsm"]}
+         "wc": L["wc"], "dsm_minus_cop": L["dsm"] - L["cop"], "src": L["src"], "dsm": L["dsm"],
+         **{k: L[k] for k in EXTRA}}
     c = (slice(BUFPX, BUFPX + CORE), slice(BUFPX, BUFPX + CORE))
     G = np.column_stack([F[k][c].ravel() for k in FEATURES]).astype("float32")
-    v = np.all(np.isfinite(G), 1)
+    v = np.all(np.isfinite(G[:, [i for i, k in enumerate(FEATURES) if k not in EXTRA]]), 1)  # v2 layers may be NaN
     corr = np.full(G.shape[0], np.nan, "float32")
     unc = np.full(G.shape[0], np.nan, "float32")
     for a in range(0, G.shape[0], 2_000_000):
@@ -58,7 +60,7 @@ def apply(path, m, u):
     corr, unc = corr.reshape(CORE, CORE), np.maximum(unc.reshape(CORE, CORE), 0)
     dsm = L["dsm"][c]
     dtm = dsm - corr
-    out = NW / "out"
+    out = NW / OUT
     lerc = dict(compress="LERC_DEFLATE", MAX_Z_ERROR=0.01, nodata=np.nan)
     cog(out / f"{path.stem}_dem.tif", prof, dsm[None], "float32", **lerc)
     cog(out / f"{path.stem}_dtm.tif", prof, dtm[None], "float32", **lerc)
@@ -72,7 +74,7 @@ def vrt():
     """National mosaics as VRT XML (no GDAL CLI here). All tiles share one aligned 8 m grid, so each is a plain
     offset; relative paths keep the VRTs valid if data/nw is moved."""
     for kind in ("dem", "dtm", "aux"):
-        files = sorted((NW / "out").glob(f"*_{kind}.tif"))
+        files = sorted((NW / OUT).glob(f"*_{kind}.tif"))
         if not files:
             continue
         info = []
@@ -88,15 +90,15 @@ def vrt():
         bands = []
         for b in range(1, info[0][3] + 1):
             src = "".join(
-                f'<SimpleSource><SourceFilename relativeToVRT="1">out/{f.name}</SourceFilename><SourceBand>{b}</SourceBand>'
+                f'<SimpleSource><SourceFilename relativeToVRT="1">{OUT}/{f.name}</SourceFilename><SourceBand>{b}</SourceBand>'
                 f'<SrcRect xOff="0" yOff="0" xSize="{CORE}" ySize="{CORE}"/>'
                 f'<DstRect xOff="{int(round((cx - x0) / 8))}" yOff="{int(round((y1 - cy) / 8))}" xSize="{CORE}" ySize="{CORE}"/>'
                 f"</SimpleSource>" for f, cx, cy, *_ in info)
             bands.append(f'<VRTRasterBand dataType="{dt}" band="{b}"><NoDataValue>{nod}</NoDataValue>{src}</VRTRasterBand>')
         xml = (f'<VRTDataset rasterXSize="{W}" rasterYSize="{H}"><SRS>{info[0][6]}</SRS>'
                f"<GeoTransform>{x0}, 8, 0, {y1}, 0, -8</GeoTransform>{''.join(bands)}</VRTDataset>")
-        (NW / f"nepal_{kind}_8m.vrt").write_text(xml)
-        print(f"-> nepal_{kind}_8m.vrt ({len(files)} tiles, {W} x {H} px)")
+        (NW / f"nepal_{kind}_8m{SUFFIX}.vrt").write_text(xml)
+        print(f"-> nepal_{kind}_8m{SUFFIX}.vrt ({len(files)} tiles, {W} x {H} px)")
 
 
 def main() -> None:
@@ -105,12 +107,13 @@ def main() -> None:
     ap.add_argument("--vrt-only", action="store_true")
     args = ap.parse_args()
     if not args.vrt_only:
-        (NW / "out").mkdir(exist_ok=True)
-        m, u = joblib.load(NW / "model_residual.joblib"), joblib.load(NW / "model_error.joblib")
+        (NW / OUT).mkdir(exist_ok=True)
+        m = joblib.load(NW / f"model_residual{SUFFIX}.joblib")
+        u = joblib.load(NW / f"model_error{SUFFIX}.joblib")
         k, n = map(int, args.part.split("/"))
-        stacks = sorted((NW / "stack").glob("E*N*.tif"))[k::n]
+        stacks = sorted((NW / STACK_DIR).glob("E*N*.tif"))[k::n]
         for i, p in enumerate(stacks, 1):
-            if (NW / "out" / f"{p.stem}_aux.tif").exists():
+            if (NW / OUT / f"{p.stem}_aux.tif").exists():
                 continue
             valid, mc = apply(p, m, u)
             print(f"  {i}/{len(stacks)} {p.stem}: valid {valid:.0%}, mean removed {mc:+.2f} m", flush=True)

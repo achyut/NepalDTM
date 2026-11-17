@@ -1,0 +1,360 @@
+% NepalDTM v2 working paper. Numbers come from experiments/registry.json and data/nw/adjust/solve.json;
+% every value still being computed is marked \pending{...}. Compile from this directory:
+%   tectonic paper_v2.tex
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xurl}
+\usepackage{xcolor}
+\usepackage[section]{placeins}  % figures and tables never float past the end of their section
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\newcommand{\pending}[1]{\textcolor{red}{\textbf{[pending: #1]}}}
+% \fig{file}{caption}{label}: shows a pending note until make_figures.py has produced the file
+\newcommand{\fig}[3]{\begin{figure}[!htbp]\centering\IfFileExists{figures/#1.pdf}{\includegraphics[width=0.92\textwidth,height=0.42\textheight,keepaspectratio]{#1.pdf}}{\pending{figure \detokenize{#1}}}\caption{#2}\label{#3}\end{figure}}
+\hypersetup{%
+  pdftitle={NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of Nepal},
+  pdfauthor={Achyut Paudel}%
+}
+
+\title{NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips\\
+for a National Terrain Model of Nepal}
+\author{Achyut Paudel\\
+\small \href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
+\date{Working draft, November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+NepalDTM v1 corrected the NASA High Mountain Asia (HMA) 8~m stereo mosaic to bare earth with a gradient-boosting
+model trained on satellite laser altimetry. Thirty-one recorded experiments showed that its error is set by the
+input surface, not by the model: added predictors moved the national error by at most 2\%.
+NepalDTM v2 therefore rebuilds the input. All 512 HMA stereo strips over Nepal are adjusted jointly, with a plane
+per strip, against 18.5~million ICESat-2 ATL03 ground photons and 13.3~million strip-to-strip ties; and stereo
+cells that v1 discarded at cliffs, where Copernicus itself is wrong, are kept wherever two adjusted strips agree.
+On 19.8~million held-out ATL03 ground photons, from tracks never used in the adjustment, the v2 terrain model
+scores 5.26~m RMSE (0.85~m NMAD), against 6.93~m for v1, 8.69~m for Copernicus GLO-30, 8.40~m for FABDEM and
+8.97~m for GEDTM30, and it is the most accurate of the five in every land-cover, slope and elevation class.
+Against an independent 2~m WorldView/GeoEye composite at Langtang the v2 surface error falls from 8.62 to 4.71~m.
+We also report what did not help.
+\end{abstract}
+
+\noindent\textbf{Keywords:} NepalDTM; digital terrain model; ICESat-2 ATL03; stereo DEM strips; joint adjustment;
+co-registration; Nepal; Himalaya
+
+\section{Introduction}
+Nepal has no open national terrain model finer than 30~m.
+NepalDTM v1 \citep{paudel2026nepaldtm} delivered an 8~m grid by correcting the HMA 8~m stereo mosaic \citep{shean2017hma} with a
+learned surface-to-ground residual, trained on ICESat-2 \citep{markus2017icesat2,neuenschwander2019atl08} and
+GEDI \citep{dubayah2020gedi}.
+Its national held-out error was 7.7~m RMSE on all ICESat-2 and GEDI points (the set used in
+Table~\ref{tab:exps}), 6.93~m on the held-out photons used here.
+This paper asks where the remaining error comes from and what can remove it with data that are openly available.
+
+Two findings motivate v2.
+First, predictors added to the residual model gave small returns: the best stack (CHMv2 canopy height
+\citep{brandt2026chmv2}, survey contours and rivers, and stereo-strip agreement) reached 7.585~m against a 7.724~m
+baseline on the same spatial folds (Section~\ref{sec:experiments}).
+Second, the HMA strips agree with each other to 0.82~m NMAD where several overlap, yet the mosaic built from
+them is offset by 1.5--2.3~m from independent references at Langtang.
+The error that remains is therefore largely a co-registration error of the strips, which a geodetic adjustment
+can address directly.
+Co-registration of elevation data to a reference is standard in glaciology \citep{nuth2011coreg}; here all
+strips are adjusted together, against ICESat-2 ATL03 ground photons and against each other.
+
+\section{Data}
+\begin{description}
+\item[HMA 8~m stereo strips.] 512 along-track \citep{shean2017hmaat} and cross-track \citep{shean2017hmact} strips
+over Nepal, produced with the NASA Ames Stereo Pipeline \citep{shean2016asp,shean2020hma}; 404 along-track, 109 cross-track (one strip could not be
+retrieved), 17.7~GB, WGS84 ellipsoidal heights in UTM 44N and 45N.
+\item[ICESat-2 ATL03 ground photons.] 547.5~million photons in 82 half-degree cells, obtained through server-side
+subsetting \citep{sliderule}: ATL03 high-confidence signal photons \citep{neumann2019atl03} that the ATL08 product
+\citep{neuenschwander2019atl08} labels as ground, \texttt{quality\_ph}~$=0$, and within 2~m of the median of their
+10~m along-track bin. Heights are converted to EGM2008 \citep{pavlis2012egm2008}. Whole reference ground tracks
+($\approx$20\%) are held out by a fixed hash of the track number and never used for fitting.
+\item[Independent 2~m references.] The gated median of 12 WorldView/GeoEye stereo pairs at Langtang Lirung,
+2015--2017 \citep{shean2026langtang}, and a 2~m composite of 38 cross-track pairs at Chamoli, India, September 2015
+\citep{bhushan2021chamoli}. Both are surface models, converted from ellipsoidal heights to EGM2008, with pixels
+of low pair count or NMAD $\geq 3$~m removed.
+\item[Ancillary.] Copernicus GLO-30 \citep{esa2021copernicus}, FABDEM \citep{hawker2022fabdem} (void-fill
+comparison only), ESA WorldCover \citep{zanaga2022worldcover},
+CHMv1 \citep{tolan2024canopy} and CHMv2 canopy height \citep{brandt2026chmv2}.
+\item[Ground control.] Differential GPS on and beside Khumbu Glacier, 2015--2016 \citep{quincey2016khumbu}.
+\end{description}
+
+\section{Method}
+\subsection{Joint strip adjustment}
+For strip $k$ with centre $(x_k, y_k)$ we estimate a plane correction
+\begin{equation}
+c_k(x,y) = a_k + b_k\,\frac{x-x_k}{10\,\text{km}} + d_k\,\frac{y-y_k}{10\,\text{km}} .
+\end{equation}
+Observations are gathered per 24~km tile core of the national grid, on stable open ground (WorldCover not tree,
+snow or water; slope $<35^\circ$), after removing blunders more than 40~m from the per-pixel median of all strips:
+\begin{align}
+z_k(x,y) + c_k(x,y) - h_{\text{photon}} &= 0, \\
+\bigl(z_k + c_k\bigr) - \bigl(z_j + c_j\bigr) &= 0 \quad \text{where strips $k$ and $j$ overlap},
+\end{align}
+plus a weak prior pulling all parameters to zero so that strips without photons stay defined.
+Tie points more than 25~m from the median for a strip or strip pair are discarded.
+The sparse system ($3\times512$ unknowns) is solved with LSQR \citep{paige1982lsqr} in SciPy \citep{virtanen2020scipy}
+by iteratively reweighted least squares with Huber weights \citep{huber1964robust}.
+Planes are centred on each strip, so one correction holds in every tile the strip crosses.
+The adjusted surface is the per-pixel median of the corrected strips, with strip count and NMAD kept as layers.
+
+\subsection{Terrain model v2}
+The adjusted median replaces the mosaic as the stereo surface.
+A blunder filter rejects adjusted cells more than 40~m from the local median difference to Copernicus, except
+where at least two strips agree to better than 5~m NMAD (Section~\ref{sec:voids}).
+Remaining gaps are filled from Copernicus with the local offset spread by normalized Gaussian convolution
+\citep{knutsson1993normconv}, as in v1.
+The residual model of v1, a histogram gradient-boosting regressor \citep{pedregosa2011sklearn,ke2017lightgbm},
+is retrained with three added predictors: strip count, strip NMAD and CHMv2 canopy
+height.
+
+\subsection{Metrics}
+The headline check is the DTM against held-out ICESat-2 ATL03 ground photons: whole ground tracks never used in
+the adjustment or the model, every model scored on the same photons.
+The v1 protocol is also reported for continuity: GroupKFold over 48~km spatial blocks, scored on held-out ATL08
+segments, whose 100~m fits understate gains at 8~m.
+The Langtang and Chamoli composites and Khumbu dGPS test the surface model (DEM).
+RMSE is the root-mean-square error; NMAD is 1.4826 times the median absolute deviation from the median.
+
+\section{Results}
+\subsection{Langtang test area}
+Table~\ref{tab:langtang} compares the v1 surface, the unadjusted strip median and the adjusted strip median
+(26 strips; 1.26~M photon ties, 0.70~M overlap ties).
+\begin{table}[!htbp]
+\centering
+\caption{Langtang Lirung test area. RMSE (NMAD) in metres. Cells where both surfaces have stereo only (voids: Section~\ref{sec:voids}). Left: against the gated 2~m composite averaged to 8~m
+(1,186,973 cells). Right: against held-out ICESat-2 ground photons on open ground (55,975 photons).}
+\label{tab:langtang}
+\begin{tabular}{lccc|ccc}
+\toprule
+ & \multicolumn{3}{c|}{2~m reference} & \multicolumn{3}{c}{held-out photons} \\
+Slope & v1 & strip median & adjusted & v1 & strip median & adjusted \\
+\midrule
+all       & 8.41 (1.28) & 6.23 (1.20) & \textbf{5.88} (0.92) & 4.03 (1.40) & 3.61 (1.84) & \textbf{2.61} (1.15) \\
+$<20^\circ$  & 3.03 (0.92) & 2.57 (1.01) & \textbf{1.97} (0.50) & 2.72 (1.01) & 2.51 (1.55) & \textbf{1.30} (0.78) \\
+$20$--$40^\circ$ & 5.63 (1.09) & 3.84 (1.01) & \textbf{3.38} (0.83) & 4.52 (2.53) & 4.26 (2.39) & \textbf{3.18} (2.38) \\
+$\geq40^\circ$ & 12.46 (2.02) & 9.38 (1.82) & \textbf{9.05} (1.66) & 10.97 (4.92) & 8.85 (4.96) & \textbf{7.76} (4.82) \\
+\bottomrule
+\end{tabular}
+\end{table}
+The adjustment also removes the systematic offset: the median difference against the 2~m reference moves from
+$+1.60$ to $-0.40$~m, and against the photons from $+2.35$ to $+0.20$~m.
+
+\subsection{National solve}
+The national system has 18,506,558 photon ties and 13,320,995 overlap ties for 512 strips, of which 443 have
+photon ties and 69 are held only through overlaps.
+The Huber solve converges after four iterations to 1.22~m NMAD for photon ties and 1.17~m for overlap ties.
+Strip offsets have a median of $-1.37$~m and a 5--95\% range of $-6.44$ to $+3.23$~m (Figure~\ref{fig:strips}).
+\fig{fig01_strip_corrections}{National solve: vertical offset (left) and tilt magnitude (right) of the 512 strip
+planes.}{fig:strips}
+
+\subsection{Where the remaining surface error sits: voids}
+\label{sec:voids}
+Table~\ref{tab:langtang} scores only cells where both surfaces have stereo.
+Over every 8~m cell of the Langtang reference, a first v2 product scored no better than v1 (8.67 against 8.62~m),
+although the adjusted strips passed into it unchanged.
+Splitting by source explains it (Figure~\ref{fig:source}): on the 94\% of cells with accepted stereo the error
+fell from 3.06 to 2.66~m and the $+1.6$~m bias disappeared, while the 6\% filled from Copernicus scored 32~m and
+dominated the total.
+The voids are mostly cliffs and shadowed faces, exactly where Copernicus itself is wrong (Figure~\ref{fig:maps}).
+\fig{fig03_langtang_error_maps}{DEM minus the 2~m composite over Langtang Lirung, v1 (left) and v2
+(right). Red: DEM above the reference.}{fig:maps}
+\fig{fig04_error_by_source}{Langtang DEM RMSE by source of the 8~m cell, v1 and v2.}{fig:source}
+The v1 blunder filter compared every stereo cell with Copernicus and so also rejected good stereo there.
+We compared five fills on the Langtang void cells (EXP030, Table~\ref{tab:voids}).
+Keeping adjusted cells where at least two strips agree (NMAD $<5$~m) is the only arm that helps; FABDEM, a wider
+offset kernel and photon-anchored offsets change nothing.
+\begin{table}[!htbp]
+\centering
+\caption{Void filling at Langtang (EXP030). RMSE (NMAD) in metres against the 2~m composite on void cells
+(80,549), and on the subset where re-admitted strips exist (30,747).}
+\label{tab:voids}
+\begin{tabular}{lcc}
+\toprule
+Fill & all void cells & re-admitted cells \\
+\midrule
+Copernicus + offset (v1) & 32.72 (25.90) & 47.83 \\
+Copernicus + wide offset & 36.83 (27.41) & 54.03 \\
+FABDEM + offset & 32.82 (26.21) & 47.92 \\
+photon-anchored offset & 32.69 (25.88) & 47.79 \\
+\textbf{re-admit agreed strips} & \textbf{14.25} (4.12) & \textbf{3.75} (1.17) \\
+\bottomrule
+\end{tabular}
+\end{table}
+The national stack was rebuilt with this rule; it is the v2 reported below.
+
+\subsection{National held-out accuracy}
+Table~\ref{tab:photons} and Figure~\ref{fig:photons} give the headline check: 19.8~million held-out ATL03 ground
+photons (a 25\% sample of the held-out tracks), every model scored on the same photons.
+v2 lowers the error in every class, most where v1 relied on Copernicus fill: slopes of $40^\circ$ and
+more from 29.62 to 21.39~m RMSE, bare ground and snow from 9.05 to 6.52~m, the high Himal from 8.55 to 6.10~m.
+On the v1 protocol (Table~\ref{tab:national}) the gain is small, as expected from a target smoothed over 100~m.
+\begin{table}[!htbp]
+\centering
+\caption{v1 protocol: spatial-block held-out RMSE in metres against ICESat-2 ATL08 (6.24~M points).}
+\label{tab:national}
+\begin{tabular}{lrr}
+\toprule
+Subset & v1 & v2 \\
+\midrule
+all & 5.49 & \textbf{5.48} \\
+forest & 6.82 & \textbf{6.63} \\
+slope $<20^\circ$ & 3.26 & \textbf{3.23} \\
+slope $\geq40^\circ$ & 10.80 & \textbf{10.57} \\
+\bottomrule
+\end{tabular}
+\end{table}
+Over every 8~m cell of the Langtang composite, voids included, the v2 DEM error is 4.71~m against 8.62~m for v1
+(2.65 against 4.69~m under $20^\circ$; Figure~\ref{fig:maps}).
+On Khumbu dGPS the v2 DEM scores 2.47~m at the glacier margins, 2.51~m on the glacier surface and 1.19~m on the
+wind-tower grid (v1: 2.49, 2.96 and 1.02~m).
+\fig{fig08_heldout_photons}{DTM error of Copernicus GLO-30, FABDEM, GEDTM30 and NepalDTM v1 and v2 against
+19.8~M held-out ICESat-2 ATL03 ground photons (tracks never used in the adjustment): RMSE (top) and NMAD
+(bottom).}{fig:photons}
+
+\subsection{Comparison with public global DEMs}
+The widely used open alternatives for Nepal are Copernicus GLO-30 \citep{esa2021copernicus}, a 30~m surface
+model; FABDEM \citep{hawker2022fabdem}, Copernicus with forests and buildings removed by machine learning; and
+GEDTM30 \citep{ho2025gedtm30}, a 30~m terrain model trained partly on ICESat-2, which makes its photon scores
+optimistic.
+All three are on EGM2008, as is NepalDTM, and are resampled bilinearly to the same 8~m grid.
+Each is scored on exactly the cells and points used for NepalDTM: held-out ATL03 photon tracks (DTM), the Langtang
+2~m composite (surface models only) and Khumbu dGPS (Figures~\ref{fig:photons} and~\ref{fig:public}).
+\begin{table}[!htbp]
+\centering
+\caption{DTM error against 19.8~M held-out ICESat-2 ATL03 ground photons, all models on the same photons.
+RMSE (NMAD) in metres. GEDTM30 was trained partly on ICESat-2.}
+\label{tab:photons}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Group & Copernicus & FABDEM & GEDTM30 & v1 & \textbf{v2} \\
+\midrule
+all & 8.69 (1.14) & 8.40 (1.11) & 8.97 (1.83) & 6.93 (0.93) & \textbf{5.26} (0.85) \\
+forest & 10.93 (4.19) & 8.56 (2.86) & 8.24 (2.90) & 6.95 (2.37) & \textbf{6.71} (2.21) \\
+non-forest & 8.39 (0.97) & 8.38 (0.99) & 9.05 (1.73) & 6.92 (0.83) & \textbf{5.07} (0.76) \\
+bare / snow & 10.92 (1.93) & 10.92 (1.98) & 11.85 (3.36) & 9.05 (1.62) & \textbf{6.52} (1.43) \\
+slope $<20^\circ$ & 4.80 (0.79) & 4.54 (0.80) & 4.93 (1.36) & 3.17 (0.65) & \textbf{2.80} (0.60) \\
+slope $20$--$40^\circ$ & 11.86 (3.85) & 11.38 (3.68) & 12.26 (5.41) & 9.40 (3.01) & \textbf{7.04} (2.83) \\
+slope $\geq40^\circ$ & 34.02 (11.47) & 33.49 (10.81) & 35.17 (13.42) & 29.62 (7.49) & \textbf{21.39} (6.58) \\
+Terai $<300$~m & 2.68 (0.47) & 1.81 (0.46) & 1.54 (0.58) & 1.37 (0.38) & \textbf{1.34} (0.38) \\
+Siwalik & 9.13 (3.16) & 7.54 (2.77) & 7.05 (2.75) & 5.93 (1.88) & \textbf{5.73} (1.61) \\
+hills 1--2.5~km & 10.87 (4.35) & 9.71 (4.41) & 9.70 (4.84) & 8.29 (3.33) & \textbf{7.90} (3.10) \\
+mountains 2.5--4~km & 18.41 (6.88) & 16.49 (5.77) & 16.52 (6.56) & 13.27 (4.11) & \textbf{12.05} (3.58) \\
+high Himal $>4$~km & 10.31 (1.67) & 10.32 (1.72) & 11.23 (3.11) & 8.55 (1.45) & \textbf{6.10} (1.28) \\
+\bottomrule
+\end{tabular}
+\end{table}
+Against the best public DEM in each class, v2 lowers the RMSE by 37\% overall (5.26 against 8.40~m, FABDEM),
+19\% under forest (6.71 against 8.24~m, GEDTM30), 38\% on slopes under $20^\circ$ and 36\% on slopes of
+$40^\circ$ and more.
+Over the Langtang composite, Copernicus scores 13.96~m, FABDEM 14.34~m and GEDTM30 17.37~m against 4.71~m for
+the v2 DEM; on Khumbu dGPS Copernicus scores 3.87, 4.30 and 1.52~m (margins, glacier surface, wind tower) against
+2.47, 2.51 and 1.19~m.
+The forest removal of FABDEM and GEDTM30 lowers the error under trees relative to Copernicus, but both score
+worse than Copernicus on the Langtang surface.
+On the national laser set inside Nepal (4.47~M ATL08 points, spatial blocks; v2 validation report), v2 scores
+6.16~m against 9.62~m for Copernicus, 9.09~m for GEDTM30 and 8.40~m for FABDEM.
+\fig{fig11_public_dems}{Public global DEMs against NepalDTM on independent references: the Langtang 2~m composite
+by slope (left) and Khumbu dGPS (right).}{fig:public}
+
+\subsection{Bare ground in the DTM}
+At the Khumbu dGPS sites \citep{quincey2016khumbu} the v2 DTM lies 6--8~m below the DEM on bare moraine and
+glacier, and keeping the DEM on WorldCover bare, snow/ice and moss/lichen cells would restore the DEM accuracy
+there (wind tower 7.63 to 1.19~m RMSE; EXP031).
+On the 8.9~million held-out photons on bare ground and snow, however, that rule raises the RMSE from 6.52 to
+7.49~m (all photons: 5.26 to 5.81~m), so the residual model corrects a real surface bias over snow and rock in
+general and Khumbu is a local exception.
+The rule is rejected; at Khumbu users should prefer the DEM.
+
+\section{Experiments that did not change the national picture}
+\label{sec:experiments}
+All experiments are recorded in \texttt{experiments/registry.json} with the same spatial folds unless noted.
+\begin{table}[!htbp]
+\centering
+\caption{Selected experiments. RMSE in metres on the national laser set (13.27~M points) unless noted.}
+\label{tab:exps}
+\begin{tabular}{llrr}
+\toprule
+ID & Change & baseline & result \\
+\midrule
+EXP002 & CHMv2 canopy height as predictor & 7.722 & 7.683 \\
+EXP003 & subtract CHMv2 from the target & 7.721 & 7.981 \\
+EXP018 & add GEDI to ICESat-2 training (ICESat-2 scored) & 5.402 & 5.616 \\
+EXP019 & force ground downhill along surveyed rivers (near rivers) & 8.179 & 34.168 \\
+EXP007--010 & physics proxies: land use, snow, phenology, soil carbon & 7.722 & $\pm0.00$ \\
+EXP021 & separate models for forest, cropland, other & 7.721 & 7.700 \\
+EXP022 & CHMv2 + contour + river predictors & 7.721 & 7.641 \\
+EXP024 & EXP022 + stereo-strip count, NMAD, span & 7.724 & 7.585 \\
+EXP028 & smooth per-strip correction (4~km knots), Langtang 2~m & 5.88 & 6.00 \\
+EXP029 & train on 8~m ATL03 photon cells (held-out photon cells) & 4.14 & 4.11 \\
+EXP030 & re-admit agreed strips in voids (Langtang void cells) & 32.72 & \textbf{14.25} \\
+EXP032 & Sentinel-1 72-pair InSAR height correction of Copernicus, Langtang 2~m & 12.70 & 12.69 \\
+-- & GEM-15 DSM (bias removed) as fill, held-out photons on fill cells & 3.67 & 10.64 \\
+\bottomrule
+\end{tabular}
+\end{table}
+Proxies built from elevation, slope, aspect and land cover add no information the model does not already have
+(Figure~\ref{fig:exps}).
+\fig{fig10_experiments}{Change in RMSE of each experiment against its own baseline. Only the two changes to the
+input surface (EXP027, EXP030) move the error by more than a few percent.}{fig:exps}
+Subtracting canopy height from a 10~m product at 8~m introduces registration noise.
+Hydrological enforcement fails because surveyed rivers carry no heights, so the downhill direction must come from the
+surface being corrected.
+
+Two further sources were tested as replacements for the Copernicus fill.
+A multi-baseline Sentinel-1 stack (72 HyP3 interferograms~\citep{hyp3} over three tracks, time gaps of at most
+36~days) was inverted per pixel for the height error of Copernicus, which HyP3 uses as the reference topography.
+The solved correction has a median magnitude of 0.11~m and leaves the Copernicus error unchanged (12.70 to
+12.69~m RMSE against the Langtang 2~m composite; EXP032): with perpendicular baselines of 40--60~m (median), a 10~m height
+error produces about 0.2~rad of phase, below the atmospheric and decorrelation noise.
+GEM-15~\citep{gem15}, a 15~m DSM and DTM from sub-metre commercial stereo, is better than Copernicus at Langtang
+(6.40 against 11.59~m RMSE against the 2~m composite) but worse than v2 (4.05~m).
+On 9.0~M held-out photons on the cells where v2 uses Copernicus fill, GEM-15 is about 14~m too high (median), as
+expected from the deliberate offset its producers apply over India and taper across the border; removing a per-tile
+bias leaves 10.64~m RMSE against 3.67~m for the v2 DTM there.
+Only on slopes of $40^\circ$ and more does the debiased GEM-15 surface (12.00~m) edge out the v2 DTM (12.75~m).
+
+\subsection{Transfer outside Nepal}
+Run unchanged over Chamoli (Uttarakhand), outside the training area, the v1 pipeline gives a surface error of
+9.22~m RMSE against the 2~m composite, versus 14.47~m for Copernicus (3.68 versus 6.55~m under $20^\circ$).
+That composite was co-registered to an HMA mosaic, so part of the surface agreement is shared lineage.
+
+\section{Discussion and limitations}
+The adjustment uses a plane per strip. A smoother correction surface fits the photons slightly better (1.41 to
+1.35~m NMAD) but scores worse against the 2~m reference (EXP028), so it overfits the sparse ties.
+Training on 8~m photon cells instead of ATL08 segments gains 0.7\% (EXP029): the residual model is limited by
+what its predictors explain, not by the smoothness of its target.
+Photon ties exist only on open, gentle ground; forest and slopes above $35^\circ$ inherit the strip correction
+estimated elsewhere on the strip.
+Steep forest remains the hardest class: none of the open data sees the ground under closed canopy.
+Only 39\% of Nepal's area has accepted HMA stereo; the rest still relies on Copernicus fill, which carries most
+of the remaining surface error (Section~\ref{sec:voids}).
+The 2~m references are surface models and cover two small areas; they test the surface, not the bare earth.
+A single RMSE over all cells hides the split between stereo and fill; we report both.
+
+\section{Data and code availability}
+Code: \url{https://github.com/achyut/3dnepal} (\texttt{fusion/strip\_adjust.py}, \texttt{fusion/nw\_strip\_adjust.py},
+\texttt{fusion/fetch\_atl03.py}, \texttt{experiments/}).
+Data: the v2 DEM, DTM and auxiliary layers as 324 Cloud-Optimized GeoTIFF tiles with VRT mosaics, and the DTM as
+Terrarium-encoded PMTiles for web maps, at
+\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/v2/} (v1 remains at the bucket root); interactive viewer at
+\url{https://nepaldtm.achyutpdl.com}.
+The Langtang and Chamoli composites are CC~BY-NC~4.0; derived products that include them inherit that licence.
+
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

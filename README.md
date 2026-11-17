@@ -8,6 +8,29 @@ On 4,463,463 held-out ICESat-2 points inside Nepal, with whole 48 km blocks left
 
 The paper is [`paper/paper.tex`](paper/paper.tex), with the figures in [`paper/figures`](paper/figures). The longer guide is [`paper/whitepaper.tex`](paper/whitepaper.tex). Both quote [`validation/validation_report.json`](validation/validation_report.json).
 
+## v2 (November 2026)
+
+v2 adjusts all 512 HMA stereo strips jointly to ICESat-2 ATL03 ground photons (a plane per strip, robust least
+squares), rebuilds the stack from the adjusted strips, and keeps strips that agree inside voids instead of falling
+back to Copernicus there. The DSM to DTM model is retrained on the new surface.
+
+On 19.8 million held-out ATL03 photons (tracks never used in the adjustment or training), against the same points:
+
+| | v2 | v1 | Copernicus GLO-30 | FABDEM | GEDTM30 |
+|---|---:|---:|---:|---:|---:|
+| DTM RMSE | **5.26 m** | 6.93 m | 8.69 m | 8.40 m | 8.97 m |
+
+Over every 8 m cell of the Langtang 2 m stereo composite the DEM error falls from 8.62 m (v1) to 4.71 m
+(Copernicus 13.96 m). These photon RMSEs are on a different point set from the v1 table above, so compare columns
+within this table only.
+
+- Paper: [`paper/v2/paper_v2.pdf`](paper/v2/paper_v2.pdf) (source [`paper/v2/paper_v2.tex`](paper/v2/paper_v2.tex))
+- Validation: [`validation/validation_report_v2.json`](validation/validation_report_v2.json),
+  [`validation/validation_v1_v2.json`](validation/validation_v1_v2.json)
+- Build: [`code/run_v2.sh`](code/run_v2.sh) runs the whole v2 chain after the v1 inputs are in `code/data/nw/`
+- Data: `https://nepaldtm-data.achyutpdl.com/v2/` (DEM, DTM and aux COGs in `out_v2/`, VRT mosaics, and
+  `NepalDTM_v2.webp.pmtiles` for web maps); map with a v1/v2 switch at https://nepaldtm.achyutpdl.com/map
+
 ## Results
 
 Spatial holdout, 4,463,463 ICESat-2 points inside Nepal:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -31,6 +32,13 @@ RES = 8.0
 WC = {10: "tree", 20: "shrub", 30: "grass", 40: "crop", 50: "built", 60: "bare", 70: "snow", 80: "water", 90: "wetland", 100: "moss"}
 FEATURES = ["chm_mean", "chm_q3", "chm_max", "wc", "slope", "aspect_sin", "aspect_cos", "tri", "tpi", "tpi_l",
             "dsm_minus_cop", "src", "dsm"]
+# National v2 (NW_VERSION=v2): stack_v2/ holds the photon-adjusted strip median (nw_strip_adjust.py) plus strip
+# agreement (EXP024) and CHMv2 canopy height (EXP002/EXP022); outputs get a _v2 suffix so v1 stays intact.
+V2 = os.environ.get("NW_VERSION") == "v2"
+EXTRA = ["strip_count", "strip_nmad", "chmv2"] if V2 else []
+FEATURES = FEATURES + EXTRA
+SUFFIX = "_v2" if V2 else ""
+STACK_DIR = "stack_v2" if V2 else "stack"
 
 
 # Compact stack encodings (uint16, 0 = nodata): heights at 0.1 m ("dm") or 0.2 m ("h2", fits up to 13,107 m);

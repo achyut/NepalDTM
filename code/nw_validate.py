@@ -44,7 +44,7 @@ from shapely.geometry import shape
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_external_dems import FABDEM_ZIP, GEDTM30  # noqa: E402
 FABDEM_COG = "https://huggingface.co/buckets/links-ads/fabdem/resolve/tiles/{z}_FABDEM_V1-2/N{la:02d}E{lo:03d}_FABDEM_V1-2.tif"
-from fuse_hma import WC, stats  # noqa: E402
+from fuse_hma import SUFFIX, WC, stats  # noqa: E402  (NW_VERSION=v2 -> _v2 tiles, VRTs, points, reports)
 from validate_topo import densify  # noqa: E402
 from build_stack_hma import COP, warp  # noqa: E402
 
@@ -201,7 +201,7 @@ def aoi_agreement(R, vrt):
 
 
 def seams(R):
-    tiles = {p.name[:10]: p for p in (NW / "out").glob("*_dtm.tif")}
+    tiles = {p.name[:10]: p for p in (NW / f"out{SUFFIX}").glob("*_dtm.tif")}
     xy = {k: (int(k[1:5]), int(k[6:10])) for k in tiles}
     inv = {v: k for k, v in xy.items()}
     across, inside, steps, worst = [], [], [], []
@@ -250,7 +250,7 @@ def shift(R, d):
     E = np.full((len(shifts), lon.size), np.nan, "float32")
     tid = np.array([f"E{int(a // 24000 * 24):04d}N{int(b // 24000 * 24):04d}" for a, b in zip(x, y)])
     for t in np.unique(tid[keep]):
-        p = NW / "out" / f"{t}_dem.tif"
+        p = NW / f"out{SUFFIX}" / f"{t}_dem.tif"
         if not p.exists():
             continue
         m = keep & (tid == t)
@@ -275,7 +275,7 @@ def coverage(R):
         Transformer.from_crs("EPSG:4326", CRS, always_xy=True).transform(c[:, 0], c[:, 1])))
     n = dict(px=0, hma=0, cop=0, gap=0)
     err = np.zeros(256, np.int64)
-    for p in sorted((NW / "out").glob("*_aux.tif")):
+    for p in sorted((NW / f"out{SUFFIX}").glob("*_aux.tif")):
         with rasterio.open(p) as s:
             src, e = s.read(1), s.read(2)
             inside = rasterize([(nep_m, 1)], out_shape=src.shape, transform=s.transform).astype(bool)
@@ -318,13 +318,13 @@ def markdown(R):
                        ("seams", "Tile seams"), ("coverage", "Coverage inside Nepal")):
         if R.get(sec) is not None:
             L += [f"## {title}", "", "```json", json.dumps(R[sec], indent=1), "```", ""]
-    (NW / "VALIDATION.md").write_text("\n".join(L))
+    (NW / f"VALIDATION{SUFFIX}.md").write_text("\n".join(L))
 
 
 def main() -> None:
     R = {}
-    vrt = {k: NW / f"nepal_{k}_8m.vrt" for k in ("dem", "dtm", "aux")}
-    d = dict(np.load(NW / "points.npz", allow_pickle=False))
+    vrt = {k: NW / f"nepal_{k}_8m{SUFFIX}.vrt" for k in ("dem", "dtm", "aux")}
+    d = dict(np.load(NW / f"points{SUFFIX}.npz", allow_pickle=False))
     steps = (("held-out + external DEMs", lambda: heldout(d, R)), ("dGPS", lambda: dgps(R, vrt)),
              ("contours", lambda: contours(R, vrt)), ("AOI agreement", lambda: aoi_agreement(R, vrt)),
              ("seams", lambda: seams(R)), ("shift", lambda: shift(R, d)), ("coverage", lambda: coverage(R)))
@@ -335,9 +335,9 @@ def main() -> None:
         except Exception as e:  # one failing check shouldn't hide the others; it is recorded in the report
             R[f"error: {name}"] = repr(e)[:500]
             print(f"  FAILED: {e!r}"[:300], flush=True)
-        (NW / "validation_report.json").write_text(json.dumps(R, indent=1, default=float))
+        (NW / f"validation_report{SUFFIX}.json").write_text(json.dumps(R, indent=1, default=float))
     markdown(R)
-    print("->", NW / "validation_report.json", NW / "VALIDATION.md")
+    print("->", NW / f"validation_report{SUFFIX}.json", NW / f"VALIDATION{SUFFIX}.md")
 
 
 if __name__ == "__main__":
