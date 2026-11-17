@@ -1,0 +1,327 @@
+% NepalDTM-G: mass-preserving generative downscaling of NepalDTM v2 (8 m) to 1 m.
+% Working draft. Compile from this directory: tectonic -X compile paper_g.tex
+% Figures come from make_figures.py (run from the repo root).
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xurl}
+\usepackage{xcolor}
+\usepackage[section]{placeins}
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks]{hyperref}
+\graphicspath{{figures/}}
+\newcommand{\fig}[3]{\begin{figure}[!htbp]\centering\includegraphics[width=0.92\textwidth,height=0.42\textheight,keepaspectratio]{#1.pdf}\caption{#2}\label{#3}\end{figure}}
+\hypersetup{%
+  pdftitle={NepalDTM-G: Mass-Preserving Generative Downscaling of Nepal's National 8 m Terrain Model to 1 m},
+  pdfauthor={Achyut Paudel}%
+}
+
+\title{NepalDTM-G: Mass-Preserving Generative Downscaling\\
+of Nepal's National 8~m Terrain Model to 1~m}
+\author{Achyut Paudel\\
+\small \href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
+\date{Working draft, November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+No open data measure the terrain of Nepal at 1~m.
+The finest national measured model is NepalDTM v2 (M), a bare-earth model on an 8~m grid built from stereo strips
+adjusted to ICESat-2 photons.
+We describe NepalDTM-G (G), a generator that adds 1~m detail to M while leaving M's measured content untouched.
+G is a conditional denoising diffusion model trained on 75{,}521 lidar patches from the Swiss Alps and three
+mountain ranges in the United States, each degraded with an error model fitted to M itself, so that training inputs
+resemble the real 8~m product rather than clean block averages.
+A mass-preserving projection makes every $8\times8$~m block of the output average to the corresponding M cell; we
+show that the obvious block-constant form of this constraint prints an 8~m grid into the 1~m surface, and that a
+smooth iterated form removes it.
+On held-out lidar patches, the median of four G samples is 2.8\% more accurate than bicubic interpolation in height
+and matches the true slope field better (correlation 0.69 against 0.63).
+Applied to two areas of Chitwan, G keeps the accuracy of its input against held-out ICESat-2 photons (floodplain:
+1.99~m RMSE against 1.98~m for M on 117{,}703 photons; Churia hills: 11.67~m against 11.63~m on 1{,}610 photons)
+while adding sub-8~m relief.
+G's detail is generated, not measured. We publish it as an experimental product kept separate from M.
+\end{abstract}
+
+\noindent\textbf{Keywords:} digital terrain model; downscaling; super-resolution; denoising diffusion; lidar; Nepal;
+Himalaya; generative model
+
+\section{Introduction}
+The measured national terrain model of Nepal, NepalDTM, sits on an 8~m grid~\citep{paudel2026nepaldtm}.
+Its second release (v2, M in this paper) adjusts the NASA High Mountain Asia 8~m stereo
+strips~\citep{shean2020hma} jointly to ICESat-2 ATL03 ground photons~\citep{neumann2019atl03,markus2017icesat2}
+and reaches 5.26~m RMSE against held-out photons nationally.
+Many uses want finer detail than 8~m: drainage on terraced hillsides, gully heads, river banks, road cuts, and
+visualisation at the zooms people use on web maps.
+No open source measures Nepal at that resolution, so any 1~m product must be generated: fine structure learned
+where it has been measured, here airborne lidar elsewhere, and placed on the measured 8~m surface.
+
+The risk of such a product is that it looks like measurement.
+We therefore set two rules.
+First, G must not change M at 8~m: averaged back to the 8~m grid, G equals M.
+Second, G is scored as M is, against held-out ICESat-2 photons in Nepal, and must not be worse than M there.
+Within those rules, G's job is to make the sub-8~m relief realistic.
+
+Learned super-resolution of DEMs is well established~\citep[e.g.][]{chen2016demsr}, and denoising diffusion models
+now give the most realistic image super-resolution~\citep{saharia2023sr3}.
+What is particular here is that the low-resolution input is a real product with real errors, not a block average of
+the target; Section~\ref{sec:why} shows that this difference is large enough to undo a model trained the usual way.
+Figure~\ref{fig:location} shows the areas used in this paper.
+\fig{fig06_location_map}{NepalDTM v2 over Nepal (shaded relief and elevation tint), with the area where the error
+model of M was fitted (Langtang) and the two test areas in Chitwan District.}{fig:location}
+
+\section{Why plain super-resolution does not transfer}
+\label{sec:why}
+In an earlier experiment of the NepalDTM series (EXP026), a residual convolutional network trained to map 8~m block
+means of lidar to 1~m beat bicubic interpolation on held-out clean inputs (1.889 against 2.247~m RMSE) but gave no
+gain when applied to the 8~m product itself (6.833 against 6.858~m).
+The product is not a block mean: it is blurred by the stereo matcher, carries spatially correlated noise that grows
+with slope, and has voids filled from 30~m data.
+A model that has only ever seen clean inputs reads that noise as terrain.
+G is therefore trained on lidar degraded to look like M.
+
+\section{Data}
+\subsection{Error model of the measured 8~m product}
+We compared the v2 DEM with the independent 2~m WorldView/GeoEye composite at Langtang~\citep{shean2026langtang} on
+fully covered 8~m cells.
+The stereo error is mildly blurred (Gaussian $\sigma=0.45$~px), spatially correlated with an e-folding length of
+1.34~px (11~m), and grows with slope (Table~\ref{tab:errmodel}).
+Voids, filled from coarser data with 10.8~m NMAD, rise from 0.2\% of cells below $10^\circ$ to 9.2\% above $50^\circ$.
+A degradation function applies these statistics to clean 1~m lidar: block-average to 8~m, blur, add correlated noise
+scaled per slope bin, and replace a slope-dependent share of cells with smoothed, noisier values.
+On 3{,}000 degraded patches it reproduces M's NMAD in every slope bin within 3\% (Table~\ref{tab:errmodel},
+Figure~\ref{fig:errmodel}).
+The agreement is partly by construction, since the noise is drawn per slope bin; whether the inputs are realistic is
+tested on Nepal itself (Section~\ref{sec:nepal}).
+\begin{table}[!htbp]
+\centering
+\caption{Stereo error of M at Langtang by slope (NMAD, m), the share of void cells, and the same NMAD measured on
+degraded lidar.}
+\label{tab:errmodel}
+\begin{tabular}{lrrrrrr}
+\toprule
+Slope & $0$--$10^\circ$ & $10$--$20^\circ$ & $20$--$30^\circ$ & $30$--$40^\circ$ & $40$--$50^\circ$ & $\geq50^\circ$ \\
+\midrule
+NMAD, M at Langtang & 0.39 & 0.50 & 0.65 & 0.88 & 1.29 & 2.11 \\
+void share & 0.2\% & 0.7\% & 1.7\% & 2.7\% & 4.9\% & 9.2\% \\
+NMAD, degraded lidar & 0.39 & 0.50 & 0.66 & 0.89 & 1.31 & 2.16 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\fig{fig09_error_model}{Stereo error of M by slope at Langtang (dark), the same statistic on degraded lidar (light),
+and the share of void cells (red, right axis).}{fig:errmodel}
+
+\subsection{Training lidar}
+We cut 75{,}521 gap-free patches of $256\times256$~m at 1~m (Table~\ref{tab:data}).
+39{,}150 come from swissALTI3D~\citep{swisstopo_alti3d} (0.5~m, averaged to 1~m) over the Valais and Bernese Alps.
+36{,}371 come from USGS 3DEP 1~m lidar~\citep{usgs3dep} in three settings chosen to span Nepal's mountain terrain:
+the San Juan Mountains (high and rocky), the Cascades and Olympics (steep forest) and the Great Smoky Mountains
+(forested mid-hills).
+Every 20th patch is held out for evaluation.
+None of these areas is in Nepal, and none resembles the Terai floodplain or the Churia (Siwalik) hills closely.
+Figure~\ref{fig:sites} shows a typical steep patch from each site.
+\fig{fig07_training_sites}{One training patch per site, chosen at the 80th percentile of relief within the site.}{fig:sites}
+\begin{table}[!htbp]
+\centering
+\caption{Training patches ($256\times256$ at 1~m).}
+\label{tab:data}
+\begin{tabular}{llr}
+\toprule
+Source & Setting & Patches \\
+\midrule
+swissALTI3D 0.5~m & Valais and Bernese Alps & 39{,}150 \\
+USGS 3DEP 1~m & San Juan Mountains, Colorado & 13{,}332 \\
+USGS 3DEP 1~m & Cascades and Olympics, Washington & 11{,}643 \\
+USGS 3DEP 1~m & Great Smoky Mountains & 11{,}396 \\
+\midrule
+ & total & 75{,}521 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Method}
+\subsection{Model}
+G is a conditional denoising diffusion model~\citep{ho2020ddpm}.
+The input is an 8~m patch of $32\times32$ cells; the target is the 1~m residual $r = z_{1\,\mathrm{m}} - \mathrm{bic}(x_{8\,\mathrm{m}})$, the part of
+the terrain bicubic upsampling misses, scaled by 2~m.
+The denoiser is a U-Net~\citep{ronneberger2015unet} of 14~M parameters with four resolution levels (64--256
+channels), conditioned on the bicubic upsampling and its two gradients, with a cosine noise
+schedule~\citep{nichol2021improved} and $v$-prediction~\citep{salimans2022progressive}.
+Training uses AdamW at a learning rate of $2\times10^{-4}$ with a 2{,}000-step warm-up, batches of 12 patches, and an
+exponential moving average of the weights (decay 0.999), on one Apple M4 Max GPU at about 1.2~s per step.
+Sampling uses 50 DDIM steps~\citep{song2021ddim}. Each call gives one plausible 1~m surface; we take the median of
+four, which keeps the structure the samples agree on.
+Table~\ref{tab:hyper} lists the settings.
+\begin{table}[!htbp]
+\centering
+\caption{Model, training and sampling settings of G.}
+\label{tab:hyper}
+\begin{tabular}{ll}
+\toprule
+Input / output & $32\times32$ cells at 8~m / $256\times256$ px at 1~m \\
+Target & 1~m residual from bicubic upsampling, in units of 2~m \\
+Conditioning & bicubic upsampling (in 50~m units) and its $x$, $y$ gradients \\
+Denoiser & U-Net, 4 levels (64, 128, 192, 256 channels), 14.0~M parameters \\
+Diffusion & 1{,}000 steps, cosine schedule, $v$-prediction \\
+Optimiser & AdamW, learning rate $2\times10^{-4}$, 2{,}000-step warm-up, weight decay $10^{-4}$ \\
+Batch, augmentation & 12 patches; random rotations by $90^\circ$ and flips \\
+Weights used & exponential moving average, decay 0.999 \\
+Sampling & 50 DDIM steps, median of 4 samples \\
+Projection & smooth block-mean correction, 8 passes \\
+Application & $256$~m windows every 192~m, raised-cosine blending \\
+Hardware & one Apple M4 Max GPU (36~GB), about 1.2~s per training step \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Mass-preserving projection}
+\label{sec:projection}
+After sampling, G is constrained so that each $8\times8$~m block of the output averages exactly to the M cell it came
+from.
+The obvious form of the constraint subtracts each block's mean and adds the M value back.
+It is exact, but it shifts each block by its own constant and so leaves a step at every 8~m cell edge.
+In the first Chitwan run that step shows as a faint grid: the second-difference roughness at the cell-edge column is
+2.0 times the median of the other seven columns (Figure~\ref{fig:seams}).
+We replace it with a smooth form: the block-mean error is upsampled bicubically and added, and the step is repeated.
+The error falls by about a factor of three per pass; after eight passes every block mean is within 1.5~cm of M on a
+synthetic test with added noise, and the grid is gone (roughness ratio 1.01 at the cell edge).
+Because averaging back to 8~m returns M, G cannot change M's measured accuracy at 8~m.
+\fig{fig05_seam_diagnostic}{Roughness (mean absolute second difference along rows) by column position within the
+8~m cell, relative to its median. Block-constant projection (Chitwan, red) peaks at the cell edges; smooth projection
+(Churia, blue) is flat. Bicubic (dotted) has its own smooth periodicity from the interpolation kernel.}{fig:seams}
+
+\subsection{Applying G to an area}
+An area is cut into $256\times256$~m windows stepped every 192~m, so neighbours overlap by 64~m.
+Each window is generated independently and the overlaps are blended with a raised-cosine weight.
+Rare void cells in M are filled from their nearest neighbour before generation and masked in the output.
+
+\section{Results}
+\subsection{Training}
+The $v$-prediction loss falls quickly over the first 2{,}000 steps and then slowly (Figure~\ref{fig:loss}).
+This paper reports checkpoints up to 30{,}000 of a planned 150{,}000 steps.
+\fig{fig01_training_loss}{Training loss (running mean). The run was paused and resumed at 24{,}000 steps.}{fig:loss}
+
+\subsection{Held-out lidar patches}
+Each evaluation degrades held-out patches with the error model and compares the 1~m outputs with the true lidar
+(Table~\ref{tab:heldout}, Figure~\ref{fig:heldout}).
+Each held-out patch is degraded with a fixed seed (its own index), so a given set of patches always has the same
+inputs. The evaluations at 4{,}000 and 12{,}000 steps used the same 64 patches and are directly comparable; the one at
+30{,}000 steps used 256 patches, so its absolute numbers differ and only the comparison within that row is meaningful.
+In height, a single G sample is no better than bicubic interpolation; the median of four is 2.3--2.8\% better, and
+the gap has widened slowly with training.
+The clearer signal is in shape: at 30{,}000 steps the slope map of G correlates with the true slope map at 0.69,
+against 0.63 for bicubic, so the added relief is partly right, not only plausible.
+\begin{table}[!htbp]
+\centering
+\caption{Held-out lidar patches: RMSE (m) against the true 1~m surface, and correlation of slope maps with the
+true slope map. The 4{,}000 and 12{,}000 rows share the same 64 patches; the 30{,}000 row uses 256.}
+\label{tab:heldout}
+\begin{tabular}{rrrrrrrr}
+\toprule
+ & & \multicolumn{4}{c}{RMSE (m)} & \multicolumn{2}{c}{slope-map corr.} \\
+Step & Patches & 8~m nearest & bicubic & G, 1 sample & G, median of 4 & bicubic & G \\
+\midrule
+4{,}000 & 64 & 1.844 & 1.186 & 1.185 & 1.159 & 0.628 & 0.639 \\
+12{,}000 & 64 & 1.844 & 1.186 & 1.198 & 1.158 & 0.628 & 0.632 \\
+30{,}000 & 256 & 1.994 & 1.294 & 1.300 & 1.258 & 0.627 & 0.691 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\fig{fig02_heldout_patches}{Held-out lidar patches by checkpoint. Left: RMSE against the true 1~m surface. Right:
+RMSE gain of the G median over bicubic, and slope-map correlation.}{fig:heldout}
+
+\subsection{Nepal: Chitwan floodplain and Churia hills}
+\label{sec:nepal}
+We applied G (checkpoint 24{,}000) to two areas of Chitwan District that differ from all training terrain.
+The floodplain box (84.40--84.50$^\circ$E, 27.55--27.65$^\circ$N; $10.0\times11.2$~km, 155--228~m elevation) covers
+the Rapti river and its terraces near Sauraha.
+The hills box (84.45--84.50$^\circ$E, 27.46--27.51$^\circ$N; $5.1\times5.6$~km, about 250--650~m) covers forested
+ridges and gullies of the Churia range.
+Both are scored against held-out ICESat-2 photons, from tracks never used to build M (Table~\ref{tab:nepal}).
+
+\begin{table}[!htbp]
+\centering
+\caption{Chitwan test areas: error against held-out ICESat-2 ground photons (m), and the standard deviation of the
+1~m surface about its 8~m cell value (sub-grid relief, m).}
+\label{tab:nepal}
+\begin{tabular}{lrrrrr}
+\toprule
+Area & Product & RMSE & NMAD & Median & Sub-grid relief \\
+\midrule
+Floodplain (117{,}703 photons) & M, 8~m & 1.98 & 0.52 & $+0.13$ & -- \\
+ & bicubic, 1~m & 1.97 & 0.51 & $+0.13$ & 0.58 \\
+ & G, 1~m & 1.99 & 0.52 & $+0.10$ & 0.77 \\
+\midrule
+Churia hills (1{,}610 photons) & M, 8~m & 11.63 & 7.93 & $+7.28$ & -- \\
+ & bicubic, 1~m & 11.65 & 8.44 & $+7.10$ & 1.19 \\
+ & G, 1~m & 11.67 & 8.49 & $+6.89$ & 1.27 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In both areas G is within 0.04~m RMSE of its input, as the projection requires, and adds 7--33\% more sub-grid relief
+than bicubic.
+On the floodplain the added detail draws channels, banks and terrace edges that bicubic blurs
+(Figure~\ref{fig:chitwan}); in the hills it sharpens ridges and gully heads (Figure~\ref{fig:churia}).
+The hills box also shows the limit of the approach.
+M there is Copernicus fill under forest and stands about 7~m above the photons, probably still partly canopy.
+G cannot remove that error: it adds detail to the surface it is given.
+Figure~\ref{fig:churiamaps} maps where G departs from bicubic and how its errors fall along the photon tracks.
+The added relief follows the drainage network rather than appearing as uniform texture.
+The photon errors are positive along most of both tracks, the canopy bias of M, not a pattern G introduces.
+The shaded relief also shows a straight east--west step in the lower third of the box. G's 8~m block means equal
+M, so a step running across the whole box comes from M (almost all of this box is Copernicus fill in M); we have not
+traced its cause.
+\fig{fig03_chitwan_floodplain}{Chitwan floodplain, hillshades of M (8~m, shown as blocks), bicubic and G at 1~m;
+1.5~km views (top) and 400~m views of the red square (bottom). This run used the block-constant projection, and the
+faint 8~m grid is the artefact of Section~\ref{sec:projection}.}{fig:chitwan}
+\fig{fig04_churia_hills}{Churia hills, as Figure~\ref{fig:chitwan}, with the smooth projection; 2~km views (top) and
+400~m views (bottom).}{fig:churia}
+\fig{fig08_churia_detail_and_photons}{Churia hills. Left: G minus bicubic, the relief G adds below 8~m. Right: G
+minus held-out ICESat-2 ground photons along two tracks, over shaded relief of G.}{fig:churiamaps}
+
+\section{Discussion}
+\paragraph{What G is.} G is a prior on how terrain looks at 1~m, conditioned on M.
+Where several 1~m surfaces fit the 8~m data equally well, G picks a realistic one; the median of samples picks the
+features they agree on.
+The slope-map gain on held-out lidar shows that some of this structure is real, but there is no test in Nepal that
+can say which 1~m features are: ICESat-2 photons are spaced too widely, and there is no open 1~m lidar for Nepal.
+
+\paragraph{Training domain.} The training lidar is alpine and mid-latitude mountain terrain.
+Nepal's floodplains, terraces and the soft rock of the Churia have no counterpart in it.
+Two remedies follow: adding training areas closer to Nepal (lidar of terraced or monsoon hill country), and
+fine-tuning on Nepal itself by degrading M from 8 to 64~m and learning to restore it, which assumes that relief below
+8~m looks like relief below 64~m.
+
+\paragraph{Cost.} The floodplain box (112~km$^2$) needs about 4.3~hours on one M4 Max GPU at four samples per window,
+at the rate measured while the machine was awake (the actual run took longer because the machine slept).
+At that rate the whole country would take on the order of 5{,}000 GPU-hours; a national G needs fewer samples or
+distillation to fewer sampling steps, or rented accelerators.
+
+\paragraph{Display.} On the web map, G is shown only for the test boxes and only at zooms 15--17 (about 1~m per
+pixel), as an option separate from the measured models.
+
+\section{Status}
+Training continues towards 150{,}000 steps.
+Next steps are a re-run of the floodplain
+box with the smooth projection, a second Nepal area in the high mountains, and the go/no-go gate against the 2~m
+composites at Langtang and Chamoli~\citep{bhushan2021chamoli}.
+G will be published nationally only if it passes that gate, and then as a product distinct from M.
+
+\section{Data and code availability}
+Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/error\_model.py},
+\texttt{code/g/make\_patches.py}, \texttt{code/g/g\_model.py}, \texttt{code/g/g\_apply.py}, \texttt{code/g/g\_tiles.py}).
+The measured 8~m model M is NepalDTM v2 (\url{https://github.com/achyut/NepalDTM}, branch \texttt{v2}).
+The NepalDTM-G test tiles are viewable at \url{https://nepaldtm.achyutpdl.com/map?v=g}.
+
+\FloatBarrier
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

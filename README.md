@@ -31,6 +31,19 @@ within this table only.
 - Data: `https://nepaldtm-data.achyutpdl.com/v2/` (DEM, DTM and aux COGs in `out_v2/`, VRT mosaics, and
   `NepalDTM_v2.webp.pmtiles` for web maps); map with a v1/v2 switch at https://nepaldtm.achyutpdl.com/map
 
+## NepalDTM-G: generated 1 m (experimental)
+
+NepalDTM-G adds 1 m terrain detail to the measured v2 model with a conditional diffusion model trained on Swiss and
+US lidar, degraded with an error model fitted to v2. Every 8 x 8 m block of the 1 m output averages back to the v2
+cell, so G never changes the measured model at 8 m. **Its detail is generated, not measured.**
+
+On two test areas in Chitwan, G keeps v2's accuracy against held-out ICESat-2 photons (floodplain 1.99 m against
+1.98 m RMSE on 117,703 photons; Churia hills 11.67 m against 11.63 m on 1,610 photons) while adding sub-8 m relief.
+
+- Paper: [`paper/g/paper_g.pdf`](paper/g/paper_g.pdf) (source [`paper/g/paper_g.tex`](paper/g/paper_g.tex))
+- Code: [`code/g/`](code/g), run with [`code/run_g.sh`](code/run_g.sh) after the v2 build
+- Map: https://nepaldtm.achyutpdl.com/map?v=g (test area only, zooms 15 to 17)
+
 ## Results
 
 Spatial holdout, 4,463,463 ICESat-2 points inside Nepal:
