@@ -1,4 +1,4 @@
-% NepalDTM v2 working paper. Numbers come from experiments/registry.json and data/nw/adjust/solve.json;
+% NepalDTM v2 working paper. Numbers come from validation/experiments_registry.json and the v2 validation reports;
 % every value still being computed is marked \pending{...}. Compile from this directory:
 %   tectonic paper_v2.tex
 \documentclass[11pt]{article}
@@ -280,7 +280,7 @@ The rule is rejected; at Khumbu users should prefer the DEM.
 
 \section{Experiments that did not change the national picture}
 \label{sec:experiments}
-All experiments are recorded in \texttt{experiments/registry.json} with the same spatial folds unless noted.
+All experiments are recorded in \texttt{validation/experiments\_registry.json} of the code repository, with the same spatial folds unless noted.
 \begin{table}[!htbp]
 \centering
 \caption{Selected experiments. RMSE in metres on the national laser set (13.27~M points) unless noted.}
@@ -345,11 +345,12 @@ The 2~m references are surface models and cover two small areas; they test the s
 A single RMSE over all cells hides the split between stereo and fill; we report both.
 
 \section{Data and code availability}
-Code: \url{https://github.com/achyut/3dnepal} (\texttt{fusion/strip\_adjust.py}, \texttt{fusion/nw\_strip\_adjust.py},
-\texttt{fusion/fetch\_atl03.py}, \texttt{experiments/}).
+Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{v2} (\texttt{code/run\_v2.sh} runs the full build;
+\texttt{code/strip\_adjust.py}, \texttt{code/nw\_strip\_adjust.py}, \texttt{code/fetch\_atl03.py}; experiment records in
+\texttt{validation/experiments\_registry.json}).
 Data: the v2 DEM, DTM and auxiliary layers as 324 Cloud-Optimized GeoTIFF tiles with VRT mosaics, and the DTM as
 Terrarium-encoded PMTiles for web maps, at
-\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/v2/} (v1 remains at the bucket root); interactive viewer at
+\url{https://nepaldtm-data.achyutpdl.com/v2/} (v1 remains at the bucket root); interactive viewer at
 \url{https://nepaldtm.achyutpdl.com}.
 The Langtang and Chamoli composites are CC~BY-NC~4.0; derived products that include them inherit that licence.
 

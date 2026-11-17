@@ -1,0 +1,3190 @@
+{
+  "experiments": [
+    {
+      "id": "EXP001",
+      "hypothesis_id": "H_SAR_BACKSCATTER",
+      "name": "Sentinel-1 C-band SAR backscatter features",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-14T00:00:00Z",
+      "completed": "2026-10-14T12:00:00Z",
+      "area": "bhotekoshi",
+      "config": {
+        "features_added": [
+          "s1_vv_mean",
+          "s1_vh_mean",
+          "s1_vh_vv_ratio",
+          "s1_vh_std",
+          "s1_vv_std",
+          "s1_vh_range",
+          "s1_vhvv_slope"
+        ],
+        "target_modification": null,
+        "n_points": 109905
+      },
+      "results": {
+        "baseline_rmse": 9.337,
+        "experiment_rmse": 9.215,
+        "improvement_pct": 1.31,
+        "subgroups": {
+          "baseline": {
+            "all": 9.337,
+            "forest": 10.025,
+            "steep": 9.711,
+            "forest_steep": 10.2,
+            "forest_steep_cop": 13.704
+          },
+          "enhanced": {
+            "all": 9.215,
+            "forest": 9.898,
+            "steep": 9.586,
+            "forest_steep": 10.081,
+            "forest_steep_cop": 13.41
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "C-band SAR (5.6cm wavelength) scatters off canopy top, does not penetrate to ground. Only 1.3% RMSE improvement. L-band needed for forest penetration.",
+      "spawned_hypotheses": [
+        "H_INSAR_PHASE",
+        "H_LBAND_SAR"
+      ]
+    },
+    {
+      "id": "EXP002",
+      "hypothesis_id": "H_CHMV2_FEATURE",
+      "name": "CHMv2 canopy height as ML feature",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-14T14:00:00Z",
+      "completed": "2026-10-14T16:00:00Z",
+      "area": "nationwide",
+      "config": {
+        "features_added": [
+          "chmv2_mean"
+        ],
+        "target_modification": null,
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.722,
+        "experiment_rmse": 7.683,
+        "improvement_pct": 0.51,
+        "subgroups": {
+          "baseline_v1": {
+            "all": 7.722,
+            "forest": 8.942,
+            "steep": 9.441,
+            "forest_steep": 9.958,
+            "forest_steep_cop": 10.534
+          },
+          "chmv2_only": {
+            "all": 7.719,
+            "forest": 8.924,
+            "steep": 9.423,
+            "forest_steep": 9.916,
+            "forest_steep_cop": 10.501
+          },
+          "v1_plus_v2": {
+            "all": 7.683,
+            "forest": 8.854,
+            "steep": 9.395,
+            "forest_steep": 9.867,
+            "forest_steep_cop": 10.45
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "CHMv2 as-feature adds only 0.5% improvement. Coverage 98.8% vs CHMv1 41.4%. Combined v1+v2 gives best result.",
+      "spawned_hypotheses": [
+        "H_CHMV2_CREATIVE"
+      ]
+    },
+    {
+      "id": "EXP003",
+      "hypothesis_id": "H_CHMV2_CREATIVE",
+      "name": "CHMv2 creative: direct subtraction + sub-pixel + texture",
+      "status": "completed",
+      "parent_id": "EXP002",
+      "created": "2026-10-15T00:00:00Z",
+      "completed": "2026-10-15T04:00:00Z",
+      "area": "nationwide",
+      "config": {
+        "arms": {
+          "A_baseline": "Original CHMv1 features",
+          "B_direct_subtraction": "target = residual - CHMv2",
+          "C_subpixel_extraction": "target = residual - frac * CHMv2",
+          "D_full_creative_stack": "Sub-pixel target + texture/edge/fraction/interaction features"
+        },
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.721,
+        "experiment_rmse": 7.775,
+        "improvement_pct": -0.7,
+        "subgroups": {
+          "A_baseline": {
+            "all": 7.721,
+            "forest": 8.941,
+            "steep": 9.439,
+            "forest_steep": 9.956,
+            "non_forest": 6.76
+          },
+          "B_direct_subtraction": {
+            "all": 7.981,
+            "forest": 9.413,
+            "steep": 9.684,
+            "forest_steep": 10.378,
+            "non_forest": 6.829
+          },
+          "C_subpixel_extraction": {
+            "all": 7.874,
+            "forest": 9.258,
+            "steep": 9.577,
+            "forest_steep": 10.221,
+            "non_forest": 6.765
+          },
+          "D_full_creative_stack": {
+            "all": 7.775,
+            "forest": 9.158,
+            "steep": 9.344,
+            "forest_steep": 10.129,
+            "non_forest": 6.589
+          }
+        }
+      },
+      "sideeffects": [
+        "chmv2_texture_10m",
+        "chmv2_canopy_fraction",
+        "chmv2_edge_distance"
+      ],
+      "checkpoint": null,
+      "conclusion": "Direct CHMv2 subtraction HURTS (-3.4%). 10m CHMv2 introduces noise vs 8m DSM. Baseline model already learned canopy corrections implicitly.",
+      "spawned_hypotheses": [
+        "H_SNOW_LINE",
+        "H_PHENOLOGY_GRADIENT",
+        "H_NATURAL_LANDS_MASK"
+      ]
+    },
+    {
+      "id": "EXP004",
+      "hypothesis_id": "H_HMA2_VALIDATION",
+      "name": "Validate 8m DTM against HMA2 2m DEMs for glacier regions",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-15T03:19:21.974329+00:00",
+      "completed": "2026-10-15T03:28:24.276282+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "hma2_ground_truth"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.722,
+        "experiment_rmse": 7.722,
+        "improvement_pct": 0.0,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "all": 7.722,
+            "all_mae": 4.708,
+            "forest": 8.943,
+            "forest_mae": 6.354,
+            "steep": 9.441,
+            "steep_mae": 6.438,
+            "forest_steep": 9.958,
+            "forest_steep_mae": 7.348,
+            "forest_steep_cop": 10.534,
+            "forest_steep_cop_mae": 7.81,
+            "non_forest": 6.76,
+            "non_forest_mae": 3.581,
+            "feature_importance": {}
+          },
+          "hma2_ground_truth": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "all": 7.854,
+            "all_mae": 4.785,
+            "forest": 8.939,
+            "forest_mae": 6.35,
+            "steep": 9.554,
+            "steep_mae": 6.513,
+            "forest_steep": 9.954,
+            "forest_steep_mae": 7.344,
+            "forest_steep_cop": 10.528,
+            "forest_steep_cop_mae": 7.805,
+            "non_forest": 7.014,
+            "non_forest_mae": 3.712,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "HMA2 2m DEMs provide highest-quality validation for glacier zones. Coverage is small (~6 glaciers) but resolution is 4x our product.",
+      "spawned_hypotheses": [
+        "H_HMA2_SUPERRES"
+      ]
+    },
+    {
+      "id": "EXP005",
+      "hypothesis_id": "H_CONTOUR_RIVER",
+      "name": "Survey Department contours and rivers as spatial features",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-15T04:05:29.731481+00:00",
+      "completed": "2026-10-15T04:08:28.927184+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "contour",
+          "river",
+          "contour_river"
+        ],
+        "n_points": 1476843
+      },
+      "results": {
+        "baseline_rmse": 9.707,
+        "experiment_rmse": 9.442,
+        "improvement_pct": 2.73,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 1476843,
+            "n_splits": 5,
+            "all": 9.707,
+            "all_mae": 6.429,
+            "forest": 9.829,
+            "forest_mae": 7.193,
+            "steep": 10.577,
+            "steep_mae": 7.249,
+            "forest_steep": 10.36,
+            "forest_steep_mae": 7.671,
+            "forest_steep_cop": 10.549,
+            "forest_steep_cop_mae": 7.834,
+            "non_forest": 9.623,
+            "non_forest_mae": 5.911,
+            "feature_importance": {}
+          },
+          "contour": {
+            "n_valid": 1476843,
+            "n_splits": 5,
+            "all": 9.478,
+            "all_mae": 6.356,
+            "forest": 9.859,
+            "forest_mae": 7.223,
+            "steep": 10.305,
+            "steep_mae": 7.157,
+            "forest_steep": 10.364,
+            "forest_steep_mae": 7.687,
+            "forest_steep_cop": 10.549,
+            "forest_steep_cop_mae": 7.849,
+            "non_forest": 9.211,
+            "non_forest_mae": 5.768,
+            "feature_importance": {}
+          },
+          "river": {
+            "n_valid": 1476843,
+            "n_splits": 5,
+            "all": 9.711,
+            "all_mae": 6.437,
+            "forest": 9.814,
+            "forest_mae": 7.188,
+            "steep": 10.567,
+            "steep_mae": 7.246,
+            "forest_steep": 10.324,
+            "forest_steep_mae": 7.65,
+            "forest_steep_cop": 10.509,
+            "forest_steep_cop_mae": 7.81,
+            "non_forest": 9.64,
+            "non_forest_mae": 5.927,
+            "feature_importance": {}
+          },
+          "contour_river": {
+            "n_valid": 1476843,
+            "n_splits": 5,
+            "all": 9.442,
+            "all_mae": 6.338,
+            "forest": 9.776,
+            "forest_mae": 7.176,
+            "steep": 10.269,
+            "steep_mae": 7.136,
+            "forest_steep": 10.281,
+            "forest_steep_mae": 7.638,
+            "forest_steep_cop": 10.457,
+            "forest_steep_cop_mae": 7.794,
+            "non_forest": 9.209,
+            "non_forest_mae": 5.77,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "contour_river 9.442 m RMSE vs baseline 9.707 m (+2.7%) on spatial-block holdout against altimetry, only at points within 500 m of a parsed contour. The contour download is truncated mid-file, so this is not a national test. A model trained with those contours cannot also cite them as an independent check. At 41 named-summit coordinates the 8 m DTM is -170.6 m from the labelled height on average; several summits are hundreds of metres off, so those coordinates are not a clean height check.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP006",
+      "hypothesis_id": "H_IMAGE_TERRACE_RIVER",
+      "name": "Terrace edges and river water from fine open imagery",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-15T04:20:31.025197+00:00",
+      "completed": "2026-10-15T04:20:31.025214+00:00",
+      "area": "trishuli+kathmandu",
+      "config": {
+        "n_points": 568,
+        "holdout": "satellite pass"
+      },
+      "results": {
+        "baseline_rmse": 5.084,
+        "experiment_rmse": 5.167,
+        "improvement_pct": -1.63
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Trishuli 6 cm ortho, pass holdout, n=568: terrace features 5.167 m vs baseline 5.084 m (-1.6%). Not a national score. Shadow length was not converted to metres (acquisition date 2025-09-03, no clock time). Kathmandu 2.5 m 4-band tile: surveyed river vertices are darker in every band, but the bright infrared band stays above green there, so open water could not be separated and no width was measured.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP007",
+      "hypothesis_id": "H_NATURAL_LANDS_MASK",
+      "name": "Natural lands mask for stratified DTM correction",
+      "status": "completed",
+      "parent_id": "EXP003",
+      "created": "2026-10-15T05:02:54.421923+00:00",
+      "completed": "2026-10-15T05:13:42.039996+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "natural_lands_proxy"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.722,
+        "experiment_rmse": 7.722,
+        "improvement_pct": 0.0,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "all": 7.722,
+            "all_mae": 4.709,
+            "forest": 8.943,
+            "forest_mae": 6.354,
+            "steep": 9.44,
+            "steep_mae": 6.437,
+            "forest_steep": 9.958,
+            "forest_steep_mae": 7.348,
+            "forest_steep_cop": 10.534,
+            "forest_steep_cop_mae": 7.81,
+            "non_forest": 6.759,
+            "non_forest_mae": 3.581,
+            "feature_importance": {}
+          },
+          "natural_lands_proxy": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "all": 7.724,
+            "all_mae": 4.711,
+            "forest": 8.945,
+            "forest_mae": 6.354,
+            "steep": 9.442,
+            "steep_mae": 6.438,
+            "forest_steep": 9.96,
+            "forest_steep_mae": 7.348,
+            "forest_steep_cop": 10.534,
+            "forest_steep_cop_mae": 7.809,
+            "non_forest": 6.761,
+            "non_forest_mae": 3.585,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Proxy natural-lands features tested. Next: download actual WRI Natural Lands Map for ground truth classification.",
+      "spawned_hypotheses": [
+        "H_NATURAL_LANDS_REAL",
+        "H_COMBO_STRATIFIED"
+      ]
+    },
+    {
+      "id": "EXP008",
+      "hypothesis_id": "H_SNOW_LINE",
+      "name": "Snow melt timing from Sentinel-2 SCL as elevation proxy",
+      "status": "completed",
+      "parent_id": "EXP003",
+      "created": "2026-10-15T05:13:42.178573+00:00",
+      "completed": "2026-10-15T05:19:06.929776+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "snow_proxy"
+        ],
+        "n_points": 6234012
+      },
+      "results": {
+        "baseline_rmse": 8.218,
+        "experiment_rmse": 8.218,
+        "improvement_pct": 0.0,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 6234012,
+            "n_splits": 5,
+            "all": 8.218,
+            "all_mae": 4.861,
+            "forest": 11.404,
+            "forest_mae": 8.467,
+            "steep": 9.617,
+            "steep_mae": 6.227,
+            "forest_steep": 11.65,
+            "forest_steep_mae": 8.695,
+            "forest_steep_cop": 12.623,
+            "forest_steep_cop_mae": 9.52,
+            "non_forest": 7.51,
+            "non_forest_mae": 4.219,
+            "feature_importance": {}
+          },
+          "snow_proxy": {
+            "n_valid": 6234012,
+            "n_splits": 5,
+            "all": 8.219,
+            "all_mae": 4.861,
+            "forest": 11.405,
+            "forest_mae": 8.469,
+            "steep": 9.618,
+            "steep_mae": 6.228,
+            "forest_steep": 11.652,
+            "forest_steep_mae": 8.697,
+            "forest_steep_cop": 12.625,
+            "forest_steep_cop_mae": 9.522,
+            "non_forest": 7.512,
+            "non_forest_mae": 4.22,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Physics-based snow proxy (elevation+aspect+slope) tested as feature. Next step: download actual Sentinel-2 SCL time series for real melt dates.",
+      "spawned_hypotheses": [
+        "H_SNOW_LINE_REAL",
+        "H_COMBO_SNOW_PHENO"
+      ]
+    },
+    {
+      "id": "EXP009",
+      "hypothesis_id": "H_PHENOLOGY_GRADIENT",
+      "name": "Phenology gradient (NDVI green-up timing) as elevation proxy",
+      "status": "completed",
+      "parent_id": "EXP003",
+      "created": "2026-10-15T05:19:06.994632+00:00",
+      "completed": "2026-10-15T05:26:20.697247+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "phenology_proxy"
+        ],
+        "n_points": 8749843
+      },
+      "results": {
+        "baseline_rmse": 8.073,
+        "experiment_rmse": 8.069,
+        "improvement_pct": 0.05,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 8749843,
+            "n_splits": 5,
+            "all": 8.073,
+            "all_mae": 5.119,
+            "forest": 8.939,
+            "forest_mae": 6.339,
+            "steep": 9.907,
+            "steep_mae": 7.068,
+            "forest_steep": 9.963,
+            "forest_steep_mae": 7.346,
+            "forest_steep_cop": 10.523,
+            "forest_steep_cop_mae": 7.798,
+            "non_forest": 6.458,
+            "non_forest_mae": 3.174,
+            "feature_importance": {}
+          },
+          "phenology_proxy": {
+            "n_valid": 8749843,
+            "n_splits": 5,
+            "all": 8.069,
+            "all_mae": 5.115,
+            "forest": 8.933,
+            "forest_mae": 6.334,
+            "steep": 9.904,
+            "steep_mae": 7.065,
+            "forest_steep": 9.959,
+            "forest_steep_mae": 7.342,
+            "forest_steep_cop": 10.518,
+            "forest_steep_cop_mae": 7.791,
+            "non_forest": 6.456,
+            "non_forest_mae": 3.172,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Physics-based phenology proxy tested. Next: real Sentinel-2 NDVI time series for actual green-up dates.",
+      "spawned_hypotheses": [
+        "H_PHENOLOGY_REAL",
+        "H_COMBO_SNOW_PHENO"
+      ]
+    },
+    {
+      "id": "EXP010",
+      "hypothesis_id": "H_SOIL_CARBON_PROXY",
+      "name": "Soil organic carbon density as terrain position proxy",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-15T05:26:20.808139+00:00",
+      "completed": "2026-10-15T05:36:55.816141+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "soil_carbon_proxy"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.722,
+        "experiment_rmse": 7.721,
+        "improvement_pct": 0.01,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "all": 7.722,
+            "all_mae": 4.708,
+            "forest": 8.942,
+            "forest_mae": 6.351,
+            "steep": 9.44,
+            "steep_mae": 6.437,
+            "forest_steep": 9.958,
+            "forest_steep_mae": 7.346,
+            "forest_steep_cop": 10.534,
+            "forest_steep_cop_mae": 7.808,
+            "non_forest": 6.76,
+            "non_forest_mae": 3.582,
+            "feature_importance": {}
+          },
+          "soil_carbon_proxy": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "all": 7.721,
+            "all_mae": 4.706,
+            "forest": 8.941,
+            "forest_mae": 6.351,
+            "steep": 9.439,
+            "steep_mae": 6.436,
+            "forest_steep": 9.957,
+            "forest_steep_mae": 7.348,
+            "forest_steep_cop": 10.532,
+            "forest_steep_cop_mae": 7.808,
+            "non_forest": 6.759,
+            "non_forest_mae": 3.58,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Terrain-based SOC proxy tested. Next: download actual OpenLandMap SOC rasters from STAC.",
+      "spawned_hypotheses": [
+        "H_SOIL_CARBON_REAL"
+      ]
+    },
+    {
+      "id": "EXP011",
+      "hypothesis_id": "H_INSAR_PHASE",
+      "name": "Interferometric SAR elevation correction",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.420842+00:00",
+      "completed": "2026-10-15T11:26:40.420842+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. fusion/data/nw/sar holds OPERA RTC backscatter for three areas, not Sentinel-1 SLC pairs. EXP001 already scored that backscatter. Phase-to-height needs the single-look complex data.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP012",
+      "hypothesis_id": "H_LST_LAPSE_RATE",
+      "name": "Land surface temperature lapse rate",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.424018+00:00",
+      "completed": "2026-10-15T11:26:40.424018+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. No Landsat 8/9 Band 10 scene is on disk. A temperature proxy built from elevation would repeat the DSM feature.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP013",
+      "hypothesis_id": "H_CROP_BOUNDARY_EDGE",
+      "name": "Agricultural field boundaries as a flatness prior",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.425842+00:00",
+      "completed": "2026-10-15T11:26:40.425842+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. No Trazo/FTW field-boundary layer is on disk. WorldCover cropland (class 40) is already in the baseline features.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP014",
+      "hypothesis_id": "H_SHADOW_HEIGHT",
+      "name": "Shadow-derived height differences",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.428921+00:00",
+      "completed": "2026-10-15T11:26:40.428921+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. EXP006 could not convert Trishuli shadows to metres (acquisition date 2025-09-03, no clock time). No national Sentinel-2 scene with sun elevation is on disk.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP015",
+      "hypothesis_id": "H_WATER_VAPOR",
+      "name": "Atmospheric water vapor column",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.431334+00:00",
+      "completed": "2026-10-15T11:26:40.431334+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. No Sentinel-2 B8A/B9 water-vapour raster is on disk.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP016",
+      "hypothesis_id": "H_AEROSOL_PROXY",
+      "name": "Aerosol optical depth as a valley proxy",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.434478+00:00",
+      "completed": "2026-10-15T11:26:40.434478+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. No MAIAC aerosol raster is on disk. At 1 km it is also coarser than the 8 m and 30 m surfaces already in the model.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP017",
+      "hypothesis_id": "H_LBAND_SAR",
+      "name": "L-band SAR canopy penetration",
+      "status": "blocked",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:40.436667+00:00",
+      "completed": "2026-10-15T11:26:40.436667+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [],
+        "n_points": 0
+      },
+      "results": {},
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Blocked. No PALSAR-2 or NISAR interferometric DEM is on disk. NISAR HH/HV brightness was already added to the correction model and the forest error stayed at 2.13 m versus 2.14 m.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP018",
+      "hypothesis_id": "H_GEDI_DENSIFY",
+      "name": "GEDI footprints added to ICESat-2 training",
+      "status": "completed",
+      "parent_id": null,
+      "created": "2026-10-15T11:26:41.321071+00:00",
+      "completed": "2026-10-15T11:33:38.012348+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "icesat_only",
+          "icesat_plus_gedi"
+        ],
+        "n_points": 6230548
+      },
+      "results": {
+        "baseline_rmse": 5.402,
+        "experiment_rmse": 5.616,
+        "improvement_pct": -3.96,
+        "subgroups": {
+          "icesat_only": {
+            "n_valid": 6230548,
+            "n_scored": 6230548,
+            "n_splits": 5,
+            "all": 5.402,
+            "all_mae": 2.94,
+            "forest": 6.611,
+            "forest_mae": 4.393,
+            "steep": 6.965,
+            "steep_mae": 4.354,
+            "forest_steep": 7.552,
+            "forest_steep_mae": 5.261,
+            "forest_steep_cop": 8.26,
+            "forest_steep_cop_mae": 5.822,
+            "non_forest": 4.908,
+            "non_forest_mae": 2.431,
+            "feature_importance": {}
+          },
+          "icesat_plus_gedi": {
+            "n_valid": 13266452,
+            "n_scored": 6230548,
+            "n_splits": 5,
+            "all": 5.616,
+            "all_mae": 3.126,
+            "forest": 7.16,
+            "forest_mae": 4.963,
+            "steep": 7.274,
+            "steep_mae": 4.686,
+            "forest_steep": 8.284,
+            "forest_steep_mae": 6.105,
+            "forest_steep_cop": 8.966,
+            "forest_steep_cop_mae": 6.668,
+            "non_forest": 4.962,
+            "non_forest_mae": 2.482,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Scored on 6,230,548 ICESat-2 points only. Training on ICESat-2 alone: 5.402 m. Training on ICESat-2 plus GEDI: 5.616 m. Adding GEDI made the ICESat-2 error worse. This is not the national 13.3 million point score.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP019",
+      "hypothesis_id": "H_DRAINAGE_ENFORCE",
+      "name": "Downhill enforcement along surveyed rivers",
+      "status": "completed",
+      "parent_id": "EXP005",
+      "created": "2026-10-15T11:33:38.160991+00:00",
+      "completed": "2026-10-15T11:36:48.088034+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline_near_river",
+          "drainage_enforce"
+        ],
+        "n_points": 2154423
+      },
+      "results": {
+        "baseline_rmse": 8.179,
+        "experiment_rmse": 34.168,
+        "improvement_pct": -317.75,
+        "subgroups": {
+          "baseline_near_river": {
+            "n_valid": 2154423,
+            "n_scored": 2154423,
+            "n_splits": 5,
+            "all": 8.179,
+            "all_mae": 5.248,
+            "forest": 9.226,
+            "forest_mae": 6.59,
+            "steep": 9.869,
+            "steep_mae": 7.03,
+            "forest_steep": 10.194,
+            "forest_steep_mae": 7.567,
+            "forest_steep_cop": 10.725,
+            "forest_steep_cop_mae": 8.007,
+            "non_forest": 6.518,
+            "non_forest_mae": 3.452,
+            "feature_importance": {}
+          },
+          "drainage_enforce": {
+            "n_valid": 2154423,
+            "n_splits": 5,
+            "all": 34.168,
+            "all_mae": 21.126,
+            "forest": 35.859,
+            "forest_mae": 23.332,
+            "steep": 40.505,
+            "steep_mae": 27.779,
+            "forest_steep": 39.712,
+            "forest_steep_mae": 27.387,
+            "forest_steep_cop": 40.178,
+            "forest_steep_cop_mae": 27.945,
+            "non_forest": 31.765,
+            "non_forest_mae": 18.172,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "On 2,154,423 laser points within 200 m of a surveyed river, the out-of-fold model was 8.179 m. Forcing the predicted ground to fall monotonically along the river raised that error to 34.168 m. Rivers have no height, so the downhill direction was taken from the surface itself.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP020",
+      "hypothesis_id": "H_COMBO_SNOW_PHENO",
+      "name": "Snow proxy stacked with green-up proxy",
+      "status": "completed",
+      "parent_id": "EXP009",
+      "created": "2026-10-15T11:36:48.128226+00:00",
+      "completed": "2026-10-15T14:46:00.944896+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "snow_plus_pheno"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.721,
+        "experiment_rmse": 7.719,
+        "improvement_pct": 0.03,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.721,
+            "all_mae": 4.708,
+            "forest": 8.941,
+            "forest_mae": 6.352,
+            "steep": 9.44,
+            "steep_mae": 6.437,
+            "forest_steep": 9.956,
+            "forest_steep_mae": 7.347,
+            "forest_steep_cop": 10.531,
+            "forest_steep_cop_mae": 7.809,
+            "non_forest": 6.76,
+            "non_forest_mae": 3.582,
+            "feature_importance": {}
+          },
+          "snow_plus_pheno": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.719,
+            "all_mae": 4.708,
+            "forest": 8.938,
+            "forest_mae": 6.351,
+            "steep": 9.437,
+            "steep_mae": 6.436,
+            "forest_steep": 9.954,
+            "forest_steep_mae": 7.346,
+            "forest_steep_cop": 10.528,
+            "forest_steep_cop_mae": 7.805,
+            "non_forest": 6.759,
+            "non_forest_mae": 3.582,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Same physics proxies as EXP008 and EXP009, stacked. Not Sentinel-2 snow dates or NDVI.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP021",
+      "hypothesis_id": "H_COMBO_STRATIFIED",
+      "name": "Separate models for forest, cropland, and other land",
+      "status": "completed",
+      "parent_id": "EXP007",
+      "created": "2026-10-15T14:46:01.094865+00:00",
+      "completed": "2026-10-15T14:53:59.787905+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "stratified"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.721,
+        "experiment_rmse": 7.7,
+        "improvement_pct": 0.27,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "feature_importance": {},
+            "all": 7.721,
+            "all_mae": 4.708,
+            "forest": 8.94,
+            "forest_mae": 6.35,
+            "steep": 9.439,
+            "steep_mae": 6.436,
+            "forest_steep": 9.956,
+            "forest_steep_mae": 7.345,
+            "forest_steep_cop": 10.531,
+            "forest_steep_cop_mae": 7.807,
+            "non_forest": 6.76,
+            "non_forest_mae": 3.582
+          },
+          "stratified": {
+            "n_valid": 13266452,
+            "n_splits": 5,
+            "feature_importance": {},
+            "all": 7.7,
+            "all_mae": 4.69,
+            "forest": 8.928,
+            "forest_mae": 6.339,
+            "steep": 9.418,
+            "steep_mae": 6.42,
+            "forest_steep": 9.944,
+            "forest_steep_mae": 7.333,
+            "forest_steep_cop": 10.522,
+            "forest_steep_cop_mae": 7.796,
+            "non_forest": 6.731,
+            "non_forest_mae": 3.56
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Separate HistGBR models for WorldCover forest, cropland, and other land, scored on the same spatial blocks as one national model. This is WorldCover, not the WRI Natural Lands map.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP022",
+      "hypothesis_id": "H_COMBO_ALL_BEST",
+      "name": "CHMv2 plus contour and river features",
+      "status": "completed",
+      "parent_id": "EXP002",
+      "created": "2026-10-15T14:53:59.932282+00:00",
+      "completed": "2026-10-15T15:10:05.479054+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "chmv2",
+          "chmv2_contour_river"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.721,
+        "experiment_rmse": 7.641,
+        "improvement_pct": 1.04,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.721,
+            "all_mae": 4.707,
+            "forest": 8.94,
+            "forest_mae": 6.351,
+            "steep": 9.439,
+            "steep_mae": 6.435,
+            "forest_steep": 9.955,
+            "forest_steep_mae": 7.345,
+            "forest_steep_cop": 10.53,
+            "forest_steep_cop_mae": 7.806,
+            "non_forest": 6.759,
+            "non_forest_mae": 3.581,
+            "feature_importance": {}
+          },
+          "chmv2": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.668,
+            "all_mae": 4.664,
+            "forest": 8.827,
+            "forest_mae": 6.243,
+            "steep": 9.38,
+            "steep_mae": 6.379,
+            "forest_steep": 9.837,
+            "forest_steep_mae": 7.227,
+            "forest_steep_cop": 10.417,
+            "forest_steep_cop_mae": 7.688,
+            "non_forest": 6.761,
+            "non_forest_mae": 3.582,
+            "feature_importance": {}
+          },
+          "chmv2_contour_river": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.641,
+            "all_mae": 4.663,
+            "forest": 8.819,
+            "forest_mae": 6.239,
+            "steep": 9.348,
+            "steep_mae": 6.376,
+            "forest_steep": 9.839,
+            "forest_steep_mae": 7.236,
+            "forest_steep_cop": 10.415,
+            "forest_steep_cop_mae": 7.694,
+            "non_forest": 6.716,
+            "non_forest_mae": 3.583,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": "EXP022",
+      "conclusion": "CHMv2 (the EXP002 feature) stacked with the EXP005 contour and river features, on the full laser set. Missing canopy stays missing. The contour download is still truncated, so the contour columns are only informative near the parsed sheets.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP023",
+      "hypothesis_id": "H_LANGTANG_2M_CHECK",
+      "name": "Langtang Lirung 2 m and HMA 8 m v2 composites (Zenodo 22842748)",
+      "status": "completed",
+      "parent_id": "EXP004",
+      "created": "2026-11-04T18:51:44.387002+00:00",
+      "completed": "2026-11-04T18:51:44.387002+00:00",
+      "area": "langtang",
+      "config": {
+        "n_points": 151981,
+        "holdout": "spatial block"
+      },
+      "results": {
+        "baseline_rmse": 7.939,
+        "experiment_rmse": 7.563,
+        "improvement_pct": 4.74,
+        "raster_check": {
+          "n_cells_8m": 1228353,
+          "reference": "HMA_DEM_2m_zoom_median_gated_v1.0.tif",
+          "groups": {
+            "all": {
+              "our_dem": {
+                "n": 979936,
+                "bias": 1.4454747438430786,
+                "median": 1.621826171875,
+                "rmse": 6.6871724128723145,
+                "nmad": 1.1608150005340576,
+                "le90": 3.86328125
+              },
+              "our_dtm": {
+                "n": 979936,
+                "bias": -3.130704402923584,
+                "median": -2.443359375,
+                "rmse": 7.126805305480957,
+                "nmad": 2.6242308616638184,
+                "le90": 7.55712890625
+              },
+              "copernicus": {
+                "n": 979936,
+                "bias": 0.0132558923214674,
+                "median": 0.6234130859375,
+                "rmse": 11.924201011657715,
+                "nmad": 4.798722743988037,
+                "le90": 18.0703125
+              }
+            },
+            "slope <20": {
+              "our_dem": {
+                "n": 202493,
+                "bias": 1.7057472467422485,
+                "median": 1.580322265625,
+                "rmse": 2.5685436725616455,
+                "nmad": 0.8784838914871216,
+                "le90": 3.07080078125
+              },
+              "our_dtm": {
+                "n": 202493,
+                "bias": -2.1194334030151367,
+                "median": -1.9677734375,
+                "rmse": 4.830403804779053,
+                "nmad": 2.6358137130737305,
+                "le90": 5.567285060882568
+              },
+              "copernicus": {
+                "n": 202493,
+                "bias": 0.5864153504371643,
+                "median": 0.521484375,
+                "rmse": 5.91628885269165,
+                "nmad": 3.2200217247009277,
+                "le90": 8.230224609375
+              }
+            },
+            "slope 20-40": {
+              "our_dem": {
+                "n": 497652,
+                "bias": 1.446110725402832,
+                "median": 1.574462890625,
+                "rmse": 4.884338855743408,
+                "nmad": 1.0500543117523193,
+                "le90": 3.30908203125
+              },
+              "our_dtm": {
+                "n": 497652,
+                "bias": -2.668114185333252,
+                "median": -1.935546875,
+                "rmse": 5.993546485900879,
+                "nmad": 2.1623661518096924,
+                "le90": 6.27978515625
+              },
+              "copernicus": {
+                "n": 497652,
+                "bias": -0.29719480872154236,
+                "median": 0.6279296875,
+                "rmse": 10.064608573913574,
+                "nmad": 4.1929779052734375,
+                "le90": 15.27978515625
+              }
+            },
+            "slope >=40": {
+              "our_dem": {
+                "n": 279791,
+                "bias": 1.255976915359497,
+                "median": 1.82080078125,
+                "rmse": 10.460062980651855,
+                "nmad": 1.7620353698730469,
+                "le90": 6.36474609375
+              },
+              "our_dtm": {
+                "n": 279791,
+                "bias": -4.685380935668945,
+                "median": -3.95263671875,
+                "rmse": 9.854456901550293,
+                "nmad": 2.7936296463012695,
+                "le90": 10.16650390625
+              },
+              "copernicus": {
+                "n": 279791,
+                "bias": 0.1506284773349762,
+                "median": 0.8134765625,
+                "rmse": 17.102296829223633,
+                "nmad": 8.797869682312012,
+                "le90": 27.92578125
+              }
+            }
+          }
+        },
+        "point_check": {
+          "footprint": "HMA_DEM_8m_v2_wmean_v1.0.tif",
+          "n_points": 151981,
+          "v2_wmean_minus_laser": {
+            "n": 151981,
+            "bias": 7.107072163146099,
+            "median": 3.968931242876806,
+            "rmse": 13.144641529742415,
+            "nmad": 6.9662175340719665,
+            "le90": 23.122750760482177
+          },
+          "our_dsm_minus_laser": {
+            "n": 151981,
+            "bias": 8.891008361411886,
+            "median": 5.939334263175624,
+            "rmse": 14.767838026917282,
+            "nmad": 7.2552034340026585,
+            "le90": 26.44269970180676
+          },
+          "our_dtm_heldout": {
+            "n": 151981,
+            "bias": 1.6630475865375738,
+            "median": 0.9034213981940411,
+            "rmse": 9.366558374063462,
+            "nmad": 5.81815609928701,
+            "le90": 14.693534603878106
+          },
+          "copernicus_minus_laser": {
+            "n": 151981,
+            "bias": 7.042023166575135,
+            "median": 5.235574750875003,
+            "rmse": 15.545549802253174,
+            "nmad": 9.0457008484568,
+            "le90": 26.535704732234535
+          }
+        },
+        "cv": {
+          "holdout": "spatial block",
+          "features": [
+            "v2_nmad",
+            "v2_count",
+            "v2_minus_dsm"
+          ],
+          "baseline": {
+            "n_valid": 121477,
+            "n_scored": 121477,
+            "n_splits": 4,
+            "all": 7.939,
+            "all_mae": 5.493,
+            "forest": 9.305,
+            "forest_mae": 6.911,
+            "steep": 8.297,
+            "steep_mae": 5.844,
+            "forest_steep": 9.405,
+            "forest_steep_mae": 7.029,
+            "forest_steep_cop": 17.403,
+            "forest_steep_cop_mae": 13.384,
+            "non_forest": 7.17,
+            "non_forest_mae": 4.794
+          },
+          "v2_quality": {
+            "n_valid": 121477,
+            "n_scored": 121477,
+            "n_splits": 4,
+            "all": 7.563,
+            "all_mae": 5.311,
+            "forest": 8.847,
+            "forest_mae": 6.667,
+            "steep": 7.903,
+            "steep_mae": 5.657,
+            "forest_steep": 8.95,
+            "forest_steep_mae": 6.788,
+            "forest_steep_cop": 12.69,
+            "forest_steep_cop_mae": 9.87,
+            "non_forest": 6.842,
+            "non_forest_mae": 4.643
+          }
+        }
+      },
+      "sideeffects": [
+        "langtang_2m_gated_egm2008_on_8m"
+      ],
+      "checkpoint": null,
+      "conclusion": "Gated 2 m composite on our 8 m grid (1,228,353 cells): our DEM 6.69 m RMSE, median +1.62 m (n=979,936); our DTM 7.13 m RMSE, median -2.44 m (n=979,936); Copernicus 11.92 m RMSE, median +0.62 m (n=979,936). Laser points in the 8 m v2 footprint: v2 13.14 m RMSE, median +3.97 m (n=151,981), our DTM held-out 9.37 m RMSE, median +0.90 m (n=151,981). Adding v2 NMAD, count and v2-minus-DSM (spatial block holdout): 7.563 m vs 7.939 m (+4.7%). Local footprint, not a national score; avalanche track not masked.",
+      "spawned_hypotheses": [
+        "H_SSL_SUPERRES"
+      ]
+    },
+    {
+      "id": "EXP026",
+      "hypothesis_id": "H_SSL_SUPERRES",
+      "name": "Self-supervised DEM super-resolution 8 m -> 2 m",
+      "status": "completed",
+      "parent_id": "EXP023",
+      "created": "2026-11-04T19:56:21.939394+00:00",
+      "completed": "2026-11-04T19:56:21.939394+00:00",
+      "area": "national (stage 1) + langtang/chamoli (2 m)",
+      "config": {
+        "hr_patch": 64,
+        "scale": 4,
+        "per_tile": 160
+      },
+      "results": {
+        "stage1": {
+          "bicubic_rmse": 2.247091770172119,
+          "ssl_rmse": 1.888824224472046,
+          "n_patches": 7680
+        },
+        "test_tiles": [
+          "E-024N3072",
+          "E-024N3096",
+          "E-024N3120",
+          "E-024N3168",
+          "E-024N3216",
+          "E-024N3288",
+          "E-024N3312",
+          "E-024N3336",
+          "E-048N3288",
+          "E-072N3120",
+          "E-072N3168",
+          "E-096N3240",
+          "E-120N3240",
+          "E-120N3360",
+          "E0000N3120",
+          "E0000N3288",
+          "E0024N3048",
+          "E0024N3240",
+          "E0072N3192",
+          "E0096N3096",
+          "E0096N3240",
+          "E0120N3168",
+          "E0120N3240",
+          "E0144N3120",
+          "E0168N3048",
+          "E0168N3192",
+          "E0168N3240",
+          "E0192N3024",
+          "E0192N3048",
+          "E0192N3192",
+          "E0192N3240",
+          "E0216N3192",
+          "E0216N3216",
+          "E0264N3072",
+          "E0288N3048",
+          "E0288N3144",
+          "E0312N2952",
+          "E0312N3144",
+          "E0336N3120",
+          "E0360N2928",
+          "E0360N2976",
+          "E0384N2952",
+          "E0432N2928",
+          "E0432N2952",
+          "E0432N3024",
+          "E0456N2928",
+          "E0480N2928",
+          "E0480N3072"
+        ],
+        "langtang_east": {
+          "pure_sr/bicubic": {
+            "n": 11586318,
+            "rmse": 0.5792279243469238,
+            "median": 0.0,
+            "rmse_debiased": 0.5792279243469238,
+            "nmad": 0.29101815819740295
+          },
+          "pure_sr/ssl": {
+            "n": 11586318,
+            "rmse": 0.582933247089386,
+            "median": -0.00341796875,
+            "rmse_debiased": 0.5829253196716309,
+            "nmad": 0.1650550812482834
+          },
+          "pure_sr/finetuned": {
+            "n": 11586318,
+            "rmse": 0.594923198223114,
+            "median": -0.00048828125,
+            "rmse_debiased": 0.5949406623840332,
+            "nmad": 0.2222452163696289
+          },
+          "our_8m/bicubic": {
+            "n": 12044100,
+            "rmse": 7.056579113006592,
+            "median": 1.64453125,
+            "rmse_debiased": 6.832909107208252,
+            "nmad": 1.445679783821106
+          },
+          "our_8m/ssl": {
+            "n": 12044100,
+            "rmse": 7.079890251159668,
+            "median": 1.6435546875,
+            "rmse_debiased": 6.85770320892334,
+            "nmad": 1.4239619970321655
+          },
+          "our_8m/finetuned": {
+            "n": 12044100,
+            "rmse": 7.083606243133545,
+            "median": 1.6611328125,
+            "rmse_debiased": 6.855304718017578,
+            "nmad": 1.4377166032791138
+          }
+        },
+        "chamoli_all": {
+          "pure_sr/bicubic": {
+            "n": 143938857,
+            "rmse": 1.0962485074996948,
+            "median": 0.002197265625,
+            "rmse_debiased": 1.0962482690811157,
+            "nmad": 0.35870522260665894
+          },
+          "pure_sr/ssl": {
+            "n": 143929194,
+            "rmse": 1.0996389389038086,
+            "median": 0.0032958984375,
+            "rmse_debiased": 1.0996371507644653,
+            "nmad": 0.2278556376695633
+          },
+          "pure_sr/finetuned": {
+            "n": 143929194,
+            "rmse": 1.105248212814331,
+            "median": 0.0126953125,
+            "rmse_debiased": 1.1050621271133423,
+            "nmad": 0.27364394068717957
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": "experiments/checkpoints/ssl_superres",
+      "conclusion": "Stage 1 (32->8 m, 48 unseen tiles): SSL 1.889 m vs bicubic 2.247 m (-16%). Pure 8->2 m SR from the reference's own 8 m average: NMAD bicubic 0.291 -> SSL 0.165 m (Langtang east), 0.359 -> 0.228 m (Chamoli); RMSE unchanged (~0.58 and 1.10 m). From our 8 m DEM the debiased RMSE stays 6.83 m (bicubic) vs 6.86 m (SSL): the 8 m product error dominates. Fine-tuning on Langtang west did not help. No MAE pre-training.",
+      "spawned_hypotheses": [
+        "H_SSL_MAE_PRETRAIN"
+      ]
+    },
+    {
+      "id": "EXP025",
+      "hypothesis_id": "H_CHAMOLI_TRANSFER",
+      "name": "Nepal pipeline transferred to Chamoli, scored at 2 m (Zenodo 4554647)",
+      "status": "completed",
+      "parent_id": "EXP023",
+      "created": "2026-11-04T19:59:37.147999+00:00",
+      "completed": "2026-11-04T19:59:37.147999+00:00",
+      "area": "chamoli (India)",
+      "config": {
+        "tiles": [
+          "E-240N3360",
+          "E-240N3384",
+          "E-216N3360",
+          "E-216N3384"
+        ],
+        "hma_tiles": [
+          571
+        ]
+      },
+      "results": {
+        "raster_check": {
+          "n_cells_8m": 5857675,
+          "groups": {
+            "all": {
+              "our_dem": {
+                "n": 4027177,
+                "bias": -0.6717861294746399,
+                "median": -0.3896484375,
+                "rmse": 9.220876693725586,
+                "nmad": 3.338021755218506,
+                "le90": 6.27392578125
+              },
+              "our_dtm": {
+                "n": 4027177,
+                "bias": -6.791985511779785,
+                "median": -5.330322265625,
+                "rmse": 11.675863265991211,
+                "nmad": 3.4400951862335205,
+                "le90": 13.69287109375
+              },
+              "copernicus": {
+                "n": 4090939,
+                "bias": -4.4706902503967285,
+                "median": -2.860107421875,
+                "rmse": 14.468229293823242,
+                "nmad": 4.4344072341918945,
+                "le90": 20.65234375
+              }
+            },
+            "slope <20": {
+              "our_dem": {
+                "n": 643578,
+                "bias": 0.08920834958553314,
+                "median": -0.0283203125,
+                "rmse": 3.681764841079712,
+                "nmad": 2.092869281768799,
+                "le90": 3.5916748046875
+              },
+              "our_dtm": {
+                "n": 643578,
+                "bias": -4.8057074546813965,
+                "median": -4.176513671875,
+                "rmse": 6.881341457366943,
+                "nmad": 2.2362067699432373,
+                "le90": 8.1328125
+              },
+              "copernicus": {
+                "n": 645692,
+                "bias": -2.523725748062134,
+                "median": -2.573486328125,
+                "rmse": 6.550543785095215,
+                "nmad": 2.703138828277588,
+                "le90": 7.290283203125
+              }
+            },
+            "slope 20-40": {
+              "our_dem": {
+                "n": 2496969,
+                "bias": -0.689369797706604,
+                "median": -0.699951171875,
+                "rmse": 7.094954013824463,
+                "nmad": 3.085371732711792,
+                "le90": 5.328857421875
+              },
+              "our_dtm": {
+                "n": 2496969,
+                "bias": -6.533562183380127,
+                "median": -5.42626953125,
+                "rmse": 10.116829872131348,
+                "nmad": 3.1838254928588867,
+                "le90": 12.557861328125
+              },
+              "copernicus": {
+                "n": 2532686,
+                "bias": -3.9685354232788086,
+                "median": -2.748291015625,
+                "rmse": 12.148898124694824,
+                "nmad": 3.9529967308044434,
+                "le90": 17.19775390625
+              }
+            },
+            "slope >=40": {
+              "our_dem": {
+                "n": 886630,
+                "bias": -1.1746493577957153,
+                "median": 0.632568359375,
+                "rmse": 15.316226959228516,
+                "nmad": 5.806970596313477,
+                "le90": 11.776013374328613
+              },
+              "our_dtm": {
+                "n": 886630,
+                "bias": -8.9615478515625,
+                "median": -6.7412109375,
+                "rmse": 17.22184944152832,
+                "nmad": 5.4855475425720215,
+                "le90": 19.195079803466797
+              },
+              "copernicus": {
+                "n": 912561,
+                "bias": -7.241947174072266,
+                "median": -4.314697265625,
+                "rmse": 22.325227737426758,
+                "nmad": 11.0619478225708,
+                "le90": 34.150146484375
+              }
+            }
+          }
+        }
+      },
+      "sideeffects": [
+        "chamoli_transfer_tiles"
+      ],
+      "checkpoint": null,
+      "conclusion": "Nepal-trained pipeline run unchanged on 4 tiles over Chamoli, scored against the 2015 2 m composite (5,857,675 cells of 8 m, count>=2, NMAD<3 m): our DEM 9.22 m RMSE, median -0.39 m; our DTM 11.68 m RMSE, median -5.33 m; Copernicus 14.47 m RMSE, median -2.86 m. The composite was co-registered to the HMA 8 m mosaic, so DEM agreement is partly built in. Outside Nepal; not a national score.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP024",
+      "hypothesis_id": "H_STRIP_QUALITY",
+      "name": "HMA strip count and agreement as national features",
+      "status": "completed",
+      "parent_id": "EXP023",
+      "created": "2026-11-04T19:51:08.915499+00:00",
+      "completed": "2026-11-04T20:19:52.900532+00:00",
+      "area": "nationwide",
+      "config": {
+        "arms": [
+          "baseline",
+          "strips",
+          "best_plus_strips"
+        ],
+        "n_points": 13266452
+      },
+      "results": {
+        "baseline_rmse": 7.724,
+        "experiment_rmse": 7.585,
+        "improvement_pct": 1.8,
+        "subgroups": {
+          "baseline": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.724,
+            "all_mae": 4.71,
+            "forest": 8.944,
+            "forest_mae": 6.355,
+            "steep": 9.442,
+            "steep_mae": 6.439,
+            "forest_steep": 9.96,
+            "forest_steep_mae": 7.35,
+            "forest_steep_cop": 10.535,
+            "forest_steep_cop_mae": 7.812,
+            "non_forest": 6.761,
+            "non_forest_mae": 3.583,
+            "feature_importance": {}
+          },
+          "strips": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.67,
+            "all_mae": 4.681,
+            "forest": 8.922,
+            "forest_mae": 6.339,
+            "steep": 9.374,
+            "steep_mae": 6.387,
+            "forest_steep": 9.932,
+            "forest_steep_mae": 7.326,
+            "forest_steep_cop": 10.514,
+            "forest_steep_cop_mae": 7.792,
+            "non_forest": 6.677,
+            "non_forest_mae": 3.544,
+            "feature_importance": {}
+          },
+          "best_plus_strips": {
+            "n_valid": 13266452,
+            "n_scored": 13266452,
+            "n_splits": 5,
+            "all": 7.585,
+            "all_mae": 4.629,
+            "forest": 8.791,
+            "forest_mae": 6.219,
+            "steep": 9.278,
+            "steep_mae": 6.322,
+            "forest_steep": 9.805,
+            "forest_steep_mae": 7.208,
+            "forest_steep_cop": 10.385,
+            "forest_steep_cop_mae": 7.668,
+            "non_forest": 6.632,
+            "non_forest_mae": 3.539,
+            "feature_importance": {}
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": "EXP024",
+      "conclusion": "Strip count, NMAD, median-minus-DSM and time span from the 513 NSIDC HMA 8 m strips over Nepal, sampled at every laser point (48.3% of points have at least one strip). Same spatial blocks as EXP022.",
+      "spawned_hypotheses": [
+        "H_STRIP_QUALITY_APPLY"
+      ]
+    },
+    {
+      "id": "EXP027",
+      "hypothesis_id": "H_STRIP_ADJUST",
+      "name": "Joint strip adjustment vs ICESat-2 photons (Langtang gate)",
+      "status": "completed",
+      "parent_id": "EXP024",
+      "created": "2026-11-05T03:22:41.334982+00:00",
+      "completed": "2026-11-05T03:22:41.334982+00:00",
+      "area": "langtang",
+      "config": {
+        "bounds": [
+          338721.52574331244,
+          3114941.5284747765,
+          371567.52574331244,
+          3145697.5284747765
+        ],
+        "plane": "offset + tilt per strip",
+        "robust": "Huber IRLS"
+      },
+      "results": {
+        "ref_2m": {
+          "all": {
+            "current": {
+              "n": 1186973,
+              "bias": 1.229049801826477,
+              "median": 1.603271484375,
+              "rmse": 8.410085678100586,
+              "nmad": 1.2802627086639404,
+              "le90": 4.364453315734863
+            },
+            "raw_median": {
+              "n": 1186973,
+              "bias": 1.8870147466659546,
+              "median": 1.78955078125,
+              "rmse": 6.231614112854004,
+              "nmad": 1.1988210678100586,
+              "le90": 3.87646484375
+            },
+            "adjusted": {
+              "n": 1186973,
+              "bias": -0.3023454546928406,
+              "median": -0.4033203125,
+              "rmse": 5.8842573165893555,
+              "nmad": 0.9193857312202454,
+              "le90": 2.86181640625
+            }
+          },
+          "slope <20": {
+            "current": {
+              "n": 221270,
+              "bias": 1.660270094871521,
+              "median": 1.57470703125,
+              "rmse": 3.026843786239624,
+              "nmad": 0.9230053424835205,
+              "le90": 3.21337890625
+            },
+            "raw_median": {
+              "n": 221270,
+              "bias": 1.523668646812439,
+              "median": 1.5576171875,
+              "rmse": 2.5661871433258057,
+              "nmad": 1.0127722024917603,
+              "le90": 2.697998046875
+            },
+            "adjusted": {
+              "n": 221270,
+              "bias": -0.4055333733558655,
+              "median": -0.376953125,
+              "rmse": 1.9657909870147705,
+              "nmad": 0.498060941696167,
+              "le90": 1.21875
+            }
+          },
+          "slope 20-40": {
+            "current": {
+              "n": 550837,
+              "bias": 1.2850377559661865,
+              "median": 1.560546875,
+              "rmse": 5.6318769454956055,
+              "nmad": 1.0887843370437622,
+              "le90": 3.37353515625
+            },
+            "raw_median": {
+              "n": 550837,
+              "bias": 1.7594118118286133,
+              "median": 1.7890625,
+              "rmse": 3.8426766395568848,
+              "nmad": 1.0098764896392822,
+              "le90": 3.162109375
+            },
+            "adjusted": {
+              "n": 550837,
+              "bias": -0.43532392382621765,
+              "median": -0.41845703125,
+              "rmse": 3.3800346851348877,
+              "nmad": 0.8274471759796143,
+              "le90": 1.93505859375
+            }
+          },
+          "slope >=40": {
+            "current": {
+              "n": 414866,
+              "bias": 0.9247194528579712,
+              "median": 1.73828125,
+              "rmse": 12.464521408081055,
+              "nmad": 2.021200656890869,
+              "le90": 7.827880859375
+            },
+            "raw_median": {
+              "n": 414866,
+              "bias": 2.2502307891845703,
+              "median": 1.95947265625,
+              "rmse": 9.380143165588379,
+              "nmad": 1.8170536756515503,
+              "le90": 5.9847412109375
+            },
+            "adjusted": {
+              "n": 414866,
+              "bias": -0.07074812799692154,
+              "median": -0.4140625,
+              "rmse": 9.046215057373047,
+              "nmad": 1.6570661067962646,
+              "le90": 4.984375
+            }
+          }
+        },
+        "photons_holdout": {
+          "all open": {
+            "current": {
+              "n": 55975,
+              "bias": 2.741570472717285,
+              "median": 2.34814453125,
+              "rmse": 4.0317301750183105,
+              "nmad": 1.4036920070648193,
+              "le90": 5.293749809265137
+            },
+            "raw_median": {
+              "n": 55975,
+              "bias": 2.3715875148773193,
+              "median": 2.0859375,
+              "rmse": 3.6082680225372314,
+              "nmad": 1.8409432172775269,
+              "le90": 4.92236328125
+            },
+            "adjusted": {
+              "n": 55975,
+              "bias": 0.5986109972000122,
+              "median": 0.1953125,
+              "rmse": 2.607512950897217,
+              "nmad": 1.1524897813796997,
+              "le90": 3.336718797683716
+            }
+          },
+          "open slope <20": {
+            "current": {
+              "n": 36406,
+              "bias": 2.3402962684631348,
+              "median": 2.170166015625,
+              "rmse": 2.7190215587615967,
+              "nmad": 1.0109623670578003,
+              "le90": 3.886474609375
+            },
+            "raw_median": {
+              "n": 36406,
+              "bias": 1.9319226741790771,
+              "median": 1.771484375,
+              "rmse": 2.5091731548309326,
+              "nmad": 1.5477533340454102,
+              "le90": 3.78125
+            },
+            "adjusted": {
+              "n": 36406,
+              "bias": 0.22689351439476013,
+              "median": 0.07470703125,
+              "rmse": 1.2959156036376953,
+              "nmad": 0.7756864428520203,
+              "le90": 1.7437744140625
+            }
+          },
+          "open slope 20-40": {
+            "current": {
+              "n": 17155,
+              "bias": 3.341170072555542,
+              "median": 3.10791015625,
+              "rmse": 4.518701076507568,
+              "nmad": 2.5293965339660645,
+              "le90": 6.725878715515137
+            },
+            "raw_median": {
+              "n": 17155,
+              "bias": 2.973524808883667,
+              "median": 2.76025390625,
+              "rmse": 4.2553815841674805,
+              "nmad": 2.393298625946045,
+              "le90": 6.2138671875
+            },
+            "adjusted": {
+              "n": 17155,
+              "bias": 1.101943016052246,
+              "median": 0.896484375,
+              "rmse": 3.1847000122070312,
+              "nmad": 2.381715774536133,
+              "le90": 4.514257907867432
+            }
+          },
+          "open slope >=40": {
+            "current": {
+              "n": 2414,
+              "bias": 4.532228946685791,
+              "median": 4.13916015625,
+              "rmse": 10.968635559082031,
+              "nmad": 4.917627811431885,
+              "le90": 13.246826171875
+            },
+            "raw_median": {
+              "n": 2414,
+              "bias": 4.724610805511475,
+              "median": 4.093017578125,
+              "rmse": 8.846343994140625,
+              "nmad": 4.957443714141846,
+              "le90": 12.487060546875
+            },
+            "adjusted": {
+              "n": 2414,
+              "bias": 2.627643585205078,
+              "median": 1.839111328125,
+              "rmse": 7.762244701385498,
+              "nmad": 4.817726135253906,
+              "le90": 11.22265625
+            }
+          }
+        },
+        "info": {
+          "n_photon_ties": 1262003,
+          "n_overlap_ties": 698737,
+          "n_strips": 26,
+          "files": [
+            "HMA_DEM8m_AT_20120115_0501_10504100005FE600_10504100005C2900.tif",
+            "HMA_DEM8m_AT_20150119_0512_105041001213FD00_105041001213FC00.tif",
+            "HMA_DEM8m_AT_20150121_0453_10400100062AFA00_1040010006520200.tif",
+            "HMA_DEM8m_AT_20150122_0508_1040010006841E00_10400100060FE200.tif",
+            "HMA_DEM8m_AT_20150122_0509_104001000631DB00_1040010007600F00.tif",
+            "HMA_DEM8m_AT_20150202_0516_103001003EAFF600_103001003D6B6B00.tif",
+            "HMA_DEM8m_AT_20150222_0504_1040010008B92D00_10400100087E2400.tif",
+            "HMA_DEM8m_AT_20150508_0455_104001000BA62E00_104001000B3B2300.tif",
+            "HMA_DEM8m_AT_20150605_0458_1050410012CD6B00_1050410012CD6A00.tif",
+            "HMA_DEM8m_AT_20150907_0507_10300100488DDF00_1030010048C31500.tif",
+            "HMA_DEM8m_AT_20150907_0507_1030010048A95600_103001004AC72C00.tif",
+            "HMA_DEM8m_AT_20150926_0507_1030010049B29700_103001004A7F1600.tif",
+            "HMA_DEM8m_AT_20150926_0513_1050010001863200_1050010001863100.tif",
+            "HMA_DEM8m_AT_20151007_0502_103001004A096F00_1030010049D05C00.tif",
+            "HMA_DEM8m_AT_20151026_0502_103001004A55F900_103001004ACDC000.tif",
+            "HMA_DEM8m_AT_20151103_0506_103001004B244B00_103001004B0DD500.tif",
+            "HMA_DEM8m_AT_20151114_0501_103001004BC42B00_103001004B13AE00.tif",
+            "HMA_DEM8m_AT_20151117_0505_105001000221B000_105001000221AE00.tif",
+            "HMA_DEM8m_AT_20151208_0711_10200100468C1700_1020010047C12600.tif",
+            "HMA_DEM8m_AT_20151221_0709_1020010049D9D300_1020010047944900.tif",
+            "HMA_DEM8m_AT_20151229_0721_10200100496BE700_1020010046506C00.tif",
+            "HMA_DEM8m_AT_20160107_0510_103001004F89CB00_103001004E783B00.tif",
+            "HMA_DEM8m_AT_20160107_0711_1020010047E0A900_1020010048D2C700.tif",
+            "HMA_DEM8m_AT_20161106_0456_103001005FAB7A00_103001005F7EBB00.tif",
+            "HMA_DEM8m_CT_20150503_0544_1050410012A03500_102001003C304100.tif",
+            "HMA_DEM8m_CT_20150524_1658_1030010041C15800_10300100428B2500.tif"
+          ]
+        },
+        "gate_passed": true
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Langtang gate, 26 strips, 1,262,003 photon ties, 698,737 overlap ties. Gated 2 m (1,186,973 cells): current 8.41 m RMSE, NMAD 1.28, median +1.60 (n=1,186,973); raw median 6.23 m RMSE, NMAD 1.20, median +1.79 (n=1,186,973); adjusted 5.88 m RMSE, NMAD 0.92, median -0.40 (n=1,186,973). Held-out photons on open ground: current 4.03 m RMSE, NMAD 1.40, median +2.35 (n=55,975); adjusted 2.61 m RMSE, NMAD 1.15, median +0.20 (n=55,975). Gate PASSED.",
+      "spawned_hypotheses": [
+        "H_STRIP_ADJUST_NATIONAL"
+      ]
+    },
+    {
+      "id": "EXP028",
+      "hypothesis_id": "H_STRIP_GRID",
+      "name": "Smooth per-strip correction surfaces (Langtang gate)",
+      "status": "completed",
+      "parent_id": "EXP027",
+      "created": "2026-11-08T01:05:52.419222+00:00",
+      "completed": "2026-11-08T01:05:52.419222+00:00",
+      "area": "langtang",
+      "config": {
+        "knots_m": [
+          4000,
+          2000
+        ],
+        "smooth": 3.0
+      },
+      "results": {
+        "ref_2m": {
+          "all": {
+            "current": {
+              "n": 1186973,
+              "bias": 1.229049801826477,
+              "median": 1.603271484375,
+              "rmse": 8.410085678100586,
+              "nmad": 1.2802627086639404,
+              "le90": 4.364453315734863
+            },
+            "plane": {
+              "n": 1186973,
+              "bias": -0.3023454546928406,
+              "median": -0.4033203125,
+              "rmse": 5.8842573165893555,
+              "nmad": 0.9193857312202454,
+              "le90": 2.86181640625
+            },
+            "grid_4km": {
+              "n": 1186973,
+              "bias": -1.0869016647338867,
+              "median": -1.077392578125,
+              "rmse": 6.002286434173584,
+              "nmad": 1.136925458908081,
+              "le90": 3.677734375
+            },
+            "grid_2km": {
+              "n": 1186973,
+              "bias": -1.401775598526001,
+              "median": -1.3466796875,
+              "rmse": 6.092547416687012,
+              "nmad": 1.345777988433838,
+              "le90": 4.2119140625
+            }
+          },
+          "slope <20": {
+            "current": {
+              "n": 221270,
+              "bias": 1.660270094871521,
+              "median": 1.57470703125,
+              "rmse": 3.026843786239624,
+              "nmad": 0.9230053424835205,
+              "le90": 3.21337890625
+            },
+            "plane": {
+              "n": 221270,
+              "bias": -0.4055333733558655,
+              "median": -0.376953125,
+              "rmse": 1.9657909870147705,
+              "nmad": 0.498060941696167,
+              "le90": 1.21875
+            },
+            "grid_4km": {
+              "n": 221270,
+              "bias": -1.1567310094833374,
+              "median": -1.0272216796875,
+              "rmse": 2.2930092811584473,
+              "nmad": 0.635063886642456,
+              "le90": 2.3896727561950684
+            },
+            "grid_2km": {
+              "n": 221270,
+              "bias": -1.5323431491851807,
+              "median": -1.31884765625,
+              "rmse": 2.607985019683838,
+              "nmad": 0.9975696802139282,
+              "le90": 3.1708984375
+            }
+          },
+          "slope 20-40": {
+            "current": {
+              "n": 550837,
+              "bias": 1.2850377559661865,
+              "median": 1.560546875,
+              "rmse": 5.6318769454956055,
+              "nmad": 1.0887843370437622,
+              "le90": 3.37353515625
+            },
+            "plane": {
+              "n": 550837,
+              "bias": -0.43532392382621765,
+              "median": -0.41845703125,
+              "rmse": 3.3800346851348877,
+              "nmad": 0.8274471759796143,
+              "le90": 1.93505859375
+            },
+            "grid_4km": {
+              "n": 550837,
+              "bias": -1.1372934579849243,
+              "median": -1.0361328125,
+              "rmse": 3.584320306777954,
+              "nmad": 1.0015512704849243,
+              "le90": 2.9091796875
+            },
+            "grid_2km": {
+              "n": 550837,
+              "bias": -1.376914381980896,
+              "median": -1.248046875,
+              "rmse": 3.71266770362854,
+              "nmad": 1.1090543270111084,
+              "le90": 3.32763671875
+            }
+          },
+          "slope >=40": {
+            "current": {
+              "n": 414866,
+              "bias": 0.9247194528579712,
+              "median": 1.73828125,
+              "rmse": 12.464521408081055,
+              "nmad": 2.021200656890869,
+              "le90": 7.827880859375
+            },
+            "plane": {
+              "n": 414866,
+              "bias": -0.07074812799692154,
+              "median": -0.4140625,
+              "rmse": 9.046215057373047,
+              "nmad": 1.6570661067962646,
+              "le90": 4.984375
+            },
+            "grid_4km": {
+              "n": 414866,
+              "bias": -0.9827501773834229,
+              "median": -1.26171875,
+              "rmse": 9.122267723083496,
+              "nmad": 2.020476818084717,
+              "le90": 5.67626953125
+            },
+            "grid_2km": {
+              "n": 414866,
+              "bias": -1.365146517753601,
+              "median": -1.607421875,
+              "rmse": 9.179998397827148,
+              "nmad": 2.113863229751587,
+              "le90": 6.009765625
+            }
+          }
+        },
+        "photons_holdout": {
+          "all open": {
+            "current": {
+              "n": 55975,
+              "bias": 2.741570472717285,
+              "median": 2.34814453125,
+              "rmse": 4.0317301750183105,
+              "nmad": 1.4036920070648193,
+              "le90": 5.293749809265137
+            },
+            "plane": {
+              "n": 55975,
+              "bias": 0.5986109972000122,
+              "median": 0.1953125,
+              "rmse": 2.607512950897217,
+              "nmad": 1.1524897813796997,
+              "le90": 3.336718797683716
+            },
+            "grid_4km": {
+              "n": 55975,
+              "bias": 0.621193528175354,
+              "median": 0.27294921875,
+              "rmse": 2.5916433334350586,
+              "nmad": 1.180722951889038,
+              "le90": 3.342578172683716
+            },
+            "grid_2km": {
+              "n": 55975,
+              "bias": 0.37809115648269653,
+              "median": 0.0595703125,
+              "rmse": 2.5513036251068115,
+              "nmad": 1.224158525466919,
+              "le90": 3.27978515625
+            }
+          },
+          "open slope <20": {
+            "current": {
+              "n": 36406,
+              "bias": 2.3402962684631348,
+              "median": 2.170166015625,
+              "rmse": 2.7190215587615967,
+              "nmad": 1.0109623670578003,
+              "le90": 3.886474609375
+            },
+            "plane": {
+              "n": 36406,
+              "bias": 0.22689351439476013,
+              "median": 0.07470703125,
+              "rmse": 1.2959156036376953,
+              "nmad": 0.7756864428520203,
+              "le90": 1.7437744140625
+            },
+            "grid_4km": {
+              "n": 36406,
+              "bias": 0.29163500666618347,
+              "median": 0.1639404296875,
+              "rmse": 1.273363709449768,
+              "nmad": 0.8026527166366577,
+              "le90": 1.783935546875
+            },
+            "grid_2km": {
+              "n": 36406,
+              "bias": 0.07158484309911728,
+              "median": -0.0361328125,
+              "rmse": 1.2425655126571655,
+              "nmad": 0.8524225950241089,
+              "le90": 1.7763671875
+            }
+          },
+          "open slope 20-40": {
+            "current": {
+              "n": 17155,
+              "bias": 3.341170072555542,
+              "median": 3.10791015625,
+              "rmse": 4.518701076507568,
+              "nmad": 2.5293965339660645,
+              "le90": 6.725878715515137
+            },
+            "plane": {
+              "n": 17155,
+              "bias": 1.101943016052246,
+              "median": 0.896484375,
+              "rmse": 3.1847000122070312,
+              "nmad": 2.381715774536133,
+              "le90": 4.514257907867432
+            },
+            "grid_4km": {
+              "n": 17155,
+              "bias": 1.0470889806747437,
+              "median": 0.831298828125,
+              "rmse": 3.169233798980713,
+              "nmad": 2.4454212188720703,
+              "le90": 4.58935546875
+            },
+            "grid_2km": {
+              "n": 17155,
+              "bias": 0.7745347619056702,
+              "median": 0.5361328125,
+              "rmse": 3.1057474613189697,
+              "nmad": 2.4671390056610107,
+              "le90": 4.563086032867432
+            }
+          },
+          "open slope >=40": {
+            "current": {
+              "n": 2414,
+              "bias": 4.532228946685791,
+              "median": 4.13916015625,
+              "rmse": 10.968635559082031,
+              "nmad": 4.917627811431885,
+              "le90": 13.246826171875
+            },
+            "plane": {
+              "n": 2414,
+              "bias": 2.627643585205078,
+              "median": 1.839111328125,
+              "rmse": 7.762244701385498,
+              "nmad": 4.817726135253906,
+              "le90": 11.22265625
+            },
+            "grid_4km": {
+              "n": 2414,
+              "bias": 2.564720630645752,
+              "median": 1.717041015625,
+              "rmse": 7.740250110626221,
+              "nmad": 4.9284868240356445,
+              "le90": 11.249560356140137
+            },
+            "grid_2km": {
+              "n": 2414,
+              "bias": 2.183260679244995,
+              "median": 1.306640625,
+              "rmse": 7.687682151794434,
+              "nmad": 5.047391414642334,
+              "le90": 10.901659965515137
+            }
+          }
+        },
+        "best": "grid_4km",
+        "gate_passed": false
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Langtang, 26 strips. Gated 2 m: plane 5.88 m RMSE, NMAD 0.92, median -0.40 (n=1,186,973); grid_4km 6.00 m RMSE, NMAD 1.14, median -1.08 (n=1,186,973). Held-out photons, open ground: plane 2.61 m RMSE, NMAD 1.15, median +0.20 (n=55,975); grid_4km 2.59 m RMSE, NMAD 1.18, median +0.27 (n=55,975). Gate FAILED (grid must beat plane on both).",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP029",
+      "hypothesis_id": "H_PHOTON_TARGETS",
+      "name": "8 m photon-cell training targets vs ATL08",
+      "status": "completed",
+      "parent_id": "EXP022",
+      "created": "2026-11-08T01:56:40.896695+00:00",
+      "completed": "2026-11-08T01:56:40.896695+00:00",
+      "area": "nepal",
+      "config": {
+        "min_photons": 3,
+        "folds": "5 x 48 km block groups",
+        "max_train": 3000000
+      },
+      "results": {
+        "photon_cells_holdout": {
+          "all": {
+            "copernicus": {
+              "n": 5589058,
+              "bias": 0.25339508056640625,
+              "nmad": 1.1597120761871338,
+              "rmse": 6.492117404937744,
+              "le90": 7.62744140625
+            },
+            "dsm": {
+              "n": 5589058,
+              "bias": 0.92724609375,
+              "nmad": 1.6983298063278198,
+              "rmse": 5.775150299072266,
+              "le90": 6.989907741546631
+            },
+            "atl08": {
+              "n": 5589058,
+              "bias": -0.10010784864425659,
+              "nmad": 0.9258922338485718,
+              "rmse": 4.135237216949463,
+              "le90": 4.635563850402832
+            },
+            "photons": {
+              "n": 5589058,
+              "bias": -0.035625699907541275,
+              "nmad": 0.8798739910125732,
+              "rmse": 4.117768287658691,
+              "le90": 4.37510871887207
+            },
+            "both": {
+              "n": 5589058,
+              "bias": -0.06621024012565613,
+              "nmad": 0.8850952982902527,
+              "rmse": 4.107412338256836,
+              "le90": 4.454059600830078
+            }
+          },
+          "tree": {
+            "copernicus": {
+              "n": 763465,
+              "bias": 3.3218994140625,
+              "nmad": 4.226821422576904,
+              "rmse": 9.914981842041016,
+              "le90": 16.283203125
+            },
+            "dsm": {
+              "n": 763465,
+              "bias": 3.7314987182617188,
+              "nmad": 4.269272804260254,
+              "rmse": 9.830100059509277,
+              "le90": 16.400634765625
+            },
+            "atl08": {
+              "n": 763465,
+              "bias": -0.11819171905517578,
+              "nmad": 2.4629549980163574,
+              "rmse": 5.783712387084961,
+              "le90": 8.321260452270508
+            },
+            "photons": {
+              "n": 763465,
+              "bias": -0.06482362747192383,
+              "nmad": 2.334831714630127,
+              "rmse": 5.755748748779297,
+              "le90": 8.080004692077637
+            },
+            "both": {
+              "n": 763465,
+              "bias": -0.1459992527961731,
+              "nmad": 2.4132492542266846,
+              "rmse": 5.756901264190674,
+              "le90": 8.241571426391602
+            }
+          },
+          "non-tree": {
+            "copernicus": {
+              "n": 4825593,
+              "bias": 0.15592575073242188,
+              "nmad": 0.9147989749908447,
+              "rmse": 5.767368316650391,
+              "le90": 5.384765625
+            },
+            "dsm": {
+              "n": 4825593,
+              "bias": 0.67431640625,
+              "nmad": 1.4601582288742065,
+              "rmse": 4.831249237060547,
+              "le90": 5.49951171875
+            },
+            "atl08": {
+              "n": 4825593,
+              "bias": -0.0992436408996582,
+              "nmad": 0.7807369828224182,
+              "rmse": 3.8096253871917725,
+              "le90": 3.98974871635437
+            },
+            "photons": {
+              "n": 4825593,
+              "bias": -0.034226298332214355,
+              "nmad": 0.7469432950019836,
+              "rmse": 3.794379472732544,
+              "le90": 3.7379109859466553
+            },
+            "both": {
+              "n": 4825593,
+              "bias": -0.0622788667678833,
+              "nmad": 0.7469121813774109,
+              "rmse": 3.7810792922973633,
+              "le90": 3.784895420074463
+            }
+          },
+          "slope<20": {
+            "copernicus": {
+              "n": 4061378,
+              "bias": 0.1953125,
+              "nmad": 0.6937923431396484,
+              "rmse": 4.3716654777526855,
+              "le90": 4.205873966217041
+            },
+            "dsm": {
+              "n": 4061378,
+              "bias": 0.60693359375,
+              "nmad": 1.1944775581359863,
+              "rmse": 4.262759208679199,
+              "le90": 4.813372611999512
+            },
+            "atl08": {
+              "n": 4061378,
+              "bias": -0.05250754952430725,
+              "nmad": 0.5556330680847168,
+              "rmse": 2.749391555786133,
+              "le90": 2.6457910537719727
+            },
+            "photons": {
+              "n": 4061378,
+              "bias": -0.04001075029373169,
+              "nmad": 0.5439708232879639,
+              "rmse": 2.7289998531341553,
+              "le90": 2.5385096073150635
+            },
+            "both": {
+              "n": 4061378,
+              "bias": -0.04521799832582474,
+              "nmad": 0.5408436059951782,
+              "rmse": 2.7257354259490967,
+              "le90": 2.553208351135254
+            }
+          },
+          "slope20-40": {
+            "copernicus": {
+              "n": 1317876,
+              "bias": 1.02880859375,
+              "nmad": 3.7151870727539062,
+              "rmse": 8.518022537231445,
+              "le90": 11.70703125
+            },
+            "dsm": {
+              "n": 1317876,
+              "bias": 2.43603515625,
+              "nmad": 3.5045247077941895,
+              "rmse": 7.484364986419678,
+              "le90": 9.83056640625
+            },
+            "atl08": {
+              "n": 1317876,
+              "bias": -0.9397780299186707,
+              "nmad": 2.9204306602478027,
+              "rmse": 5.627856731414795,
+              "le90": 6.897070407867432
+            },
+            "photons": {
+              "n": 1317876,
+              "bias": 0.04203903675079346,
+              "nmad": 2.875582218170166,
+              "rmse": 5.626863479614258,
+              "le90": 6.672956943511963
+            },
+            "both": {
+              "n": 1317876,
+              "bias": -0.41812682151794434,
+              "nmad": 2.892479419708252,
+              "rmse": 5.590585708618164,
+              "le90": 6.756427764892578
+            }
+          },
+          "slope>=40": {
+            "copernicus": {
+              "n": 209804,
+              "bias": 4.1817626953125,
+              "nmad": 10.154687881469727,
+              "rmse": 17.235612869262695,
+              "le90": 30.666284561157227
+            },
+            "dsm": {
+              "n": 209804,
+              "bias": 4.53857421875,
+              "nmad": 7.0405402183532715,
+              "rmse": 13.59674072265625,
+              "le90": 23.098230361938477
+            },
+            "atl08": {
+              "n": 209804,
+              "bias": -1.6602981090545654,
+              "nmad": 6.231688976287842,
+              "rmse": 10.500380516052246,
+              "le90": 15.915792465209961
+            },
+            "photons": {
+              "n": 209804,
+              "bias": 0.06483191251754761,
+              "nmad": 6.108292102813721,
+              "rmse": 10.423531532287598,
+              "le90": 15.855677604675293
+            },
+            "both": {
+              "n": 209804,
+              "bias": -0.98518967628479,
+              "nmad": 6.227278232574463,
+              "rmse": 10.453797340393066,
+              "le90": 15.882532119750977
+            }
+          }
+        },
+        "atl08_holdout": {
+          "all": {
+            "atl08": {
+              "n": 6230548,
+              "bias": -0.0038073406305088042,
+              "nmad": 1.9912937470450522,
+              "rmse": 5.497380993109113,
+              "le90": 7.319294279776885
+            },
+            "photons": {
+              "n": 6230548,
+              "bias": 0.23555919038224715,
+              "nmad": 2.044361683943945,
+              "rmse": 5.60215218707322,
+              "le90": 7.451833685443
+            },
+            "both": {
+              "n": 6230548,
+              "bias": 0.062346601043898886,
+              "nmad": 2.0154816887647238,
+              "rmse": 5.528641046890578,
+              "le90": 7.366266080242963
+            }
+          },
+          "tree": {
+            "atl08": {
+              "n": 1617515,
+              "bias": -0.603993504657808,
+              "nmad": 4.263212883339327,
+              "rmse": 6.822816212998584,
+              "le90": 10.673164452829683
+            },
+            "photons": {
+              "n": 1617515,
+              "bias": 0.05882924395336886,
+              "nmad": 4.185521082701412,
+              "rmse": 6.793902605100746,
+              "le90": 10.541587031858542
+            },
+            "both": {
+              "n": 1617515,
+              "bias": -0.5736575494078977,
+              "nmad": 4.2489838690061505,
+              "rmse": 6.814833947345012,
+              "le90": 10.634539156118302
+            }
+          },
+          "non-tree": {
+            "atl08": {
+              "n": 4613033,
+              "bias": 0.04955904936855404,
+              "nmad": 1.464614074443917,
+              "rmse": 4.9492802251077315,
+              "le90": 5.561098190610029
+            },
+            "photons": {
+              "n": 4613033,
+              "bias": 0.2589598215960365,
+              "nmad": 1.522252737288872,
+              "rmse": 5.118994006209333,
+              "le90": 5.98165599644117
+            },
+            "both": {
+              "n": 4613033,
+              "bias": 0.1248981170863317,
+              "nmad": 1.4777800097257165,
+              "rmse": 4.999907583640924,
+              "le90": 5.682064154085813
+            }
+          },
+          "slope<20": {
+            "atl08": {
+              "n": 3164932,
+              "bias": 0.03858082439906241,
+              "nmad": 0.8375554653000141,
+              "rmse": 3.2566991530805898,
+              "le90": 3.651959383899633
+            },
+            "photons": {
+              "n": 3164932,
+              "bias": 0.10617625370234407,
+              "nmad": 0.8706452988093436,
+              "rmse": 3.3385609358793813,
+              "le90": 3.809507979021145
+            },
+            "both": {
+              "n": 3164932,
+              "bias": 0.060219252931347,
+              "nmad": 0.8480222258791381,
+              "rmse": 3.2769571282843204,
+              "le90": 3.6900988109134003
+            }
+          },
+          "slope20-40": {
+            "atl08": {
+              "n": 2548662,
+              "bias": -0.1661851007477253,
+              "nmad": 3.5643018472375587,
+              "rmse": 6.080044406323786,
+              "le90": 8.503104545012365
+            },
+            "photons": {
+              "n": 2548662,
+              "bias": 0.9512211963628943,
+              "nmad": 3.61408017458159,
+              "rmse": 6.227584890066994,
+              "le90": 8.69720976880826
+            },
+            "both": {
+              "n": 2548662,
+              "bias": 0.1823484310925778,
+              "nmad": 3.6207782857331052,
+              "rmse": 6.120736364851943,
+              "le90": 8.572934735857638
+            }
+          },
+          "slope>=40": {
+            "atl08": {
+              "n": 516954,
+              "bias": -1.4176152491278344,
+              "nmad": 7.203541618863572,
+              "rmse": 10.819087383321472,
+              "le90": 16.693752075923797
+            },
+            "photons": {
+              "n": 516954,
+              "bias": 0.4865714938190422,
+              "nmad": 7.164717705009471,
+              "rmse": 10.900027754908123,
+              "le90": 16.94641669554792
+            },
+            "both": {
+              "n": 516954,
+              "bias": -0.992256584208917,
+              "nmad": 7.261813268567374,
+              "rmse": 10.86042277087375,
+              "le90": 16.783213591596997
+            }
+          }
+        },
+        "best": "both",
+        "gain": 0.006728726124484163,
+        "adopt": false
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Scored on held-out-track 8 m photon cells in held-out 48 km blocks: ATL08-trained RMSE 4.14 m (tree 5.78); both-trained 4.11 m (tree 5.76), +0.7%. On held-out ATL08 points: 5.50 vs 5.53 m. Keep ATL08 targets.",
+      "spawned_hypotheses": []
+    },
+    {
+      "id": "EXP030",
+      "hypothesis_id": "H_VOID_FILL",
+      "name": "Void filling for cells without HMA stereo",
+      "status": "completed",
+      "parent_id": "EXP027",
+      "created": "2026-11-09T13:20:55.943660+00:00",
+      "completed": "2026-11-09T13:20:55.943660+00:00",
+      "area": "langtang",
+      "config": {
+        "tiles": [
+          "E0336N3120",
+          "E0360N3120"
+        ]
+      },
+      "results": {
+        "A_cop_fill": {
+          "ref": {
+            "n": 80549,
+            "median": -0.84326171875,
+            "nmad": 25.89554786682129,
+            "rmse": 32.724979400634766,
+            "le90": 53.18867111206055
+          },
+          "ref_smooth": {
+            "n": 79287,
+            "median": -0.87548828125,
+            "nmad": 25.759450912475586,
+            "rmse": 32.673343658447266,
+            "le90": 53.12158203125
+          },
+          "kept": {
+            "n": 30747,
+            "median": -34.97998046875,
+            "nmad": 24.326078414916992,
+            "rmse": 47.829715728759766,
+            "le90": 63.752540588378906
+          },
+          "phot": {
+            "n": 13118,
+            "median": -0.53369140625,
+            "nmad": 69.80599212646484,
+            "rmse": 77.30360412597656,
+            "le90": 100.7073745727539
+          }
+        },
+        "B_cop_fill_wide": {
+          "ref": {
+            "n": 80549,
+            "median": 0.89111328125,
+            "nmad": 27.406381607055664,
+            "rmse": 36.83098602294922,
+            "le90": 58.88847732543945
+          },
+          "ref_smooth": {
+            "n": 79287,
+            "median": 0.869873046875,
+            "nmad": 27.227210998535156,
+            "rmse": 36.78196716308594,
+            "le90": 58.81367111206055
+          },
+          "kept": {
+            "n": 30747,
+            "median": -42.236328125,
+            "nmad": 22.557527542114258,
+            "rmse": 54.03496551513672,
+            "le90": 70.16328430175781
+          },
+          "phot": {
+            "n": 13118,
+            "median": -0.411865234375,
+            "nmad": 76.38719940185547,
+            "rmse": 79.66051483154297,
+            "le90": 103.7528305053711
+          }
+        },
+        "C_fabdem_fill": {
+          "ref": {
+            "n": 80549,
+            "median": -0.79541015625,
+            "nmad": 26.214075088500977,
+            "rmse": 32.823036193847656,
+            "le90": 53.415428161621094
+          },
+          "ref_smooth": {
+            "n": 79287,
+            "median": -0.8310546875,
+            "nmad": 26.071462631225586,
+            "rmse": 32.76946258544922,
+            "le90": 53.3388671875
+          },
+          "kept": {
+            "n": 30747,
+            "median": -35.130126953125,
+            "nmad": 24.495838165283203,
+            "rmse": 47.91972351074219,
+            "le90": 63.90673828125
+          },
+          "phot": {
+            "n": 13118,
+            "median": -0.639892578125,
+            "nmad": 69.89575958251953,
+            "rmse": 77.31130981445312,
+            "le90": 100.6344223022461
+          }
+        },
+        "D_strips_kept": {
+          "ref": {
+            "n": 80549,
+            "median": -0.15478515625,
+            "nmad": 4.119861602783203,
+            "rmse": 14.248968124389648,
+            "le90": 20.15478515625
+          },
+          "ref_smooth": {
+            "n": 79287,
+            "median": -0.1591796875,
+            "nmad": 4.043125629425049,
+            "rmse": 14.006065368652344,
+            "le90": 19.588281631469727
+          },
+          "kept": {
+            "n": 30747,
+            "median": -0.55712890625,
+            "nmad": 1.1705880165100098,
+            "rmse": 3.746594190597534,
+            "le90": 2.6806640625
+          },
+          "phot": {
+            "n": 13118,
+            "median": 0.24609375,
+            "nmad": 15.4923734664917,
+            "rmse": 66.42662811279297,
+            "le90": 86.9349136352539
+          }
+        },
+        "E_photon_anchor": {
+          "ref": {
+            "n": 80549,
+            "median": -0.904052734375,
+            "nmad": 25.87998390197754,
+            "rmse": 32.68656921386719,
+            "le90": 53.1376953125
+          },
+          "ref_smooth": {
+            "n": 79287,
+            "median": -0.94384765625,
+            "nmad": 25.757278442382812,
+            "rmse": 32.63494110107422,
+            "le90": 53.07392501831055
+          },
+          "kept": {
+            "n": 30747,
+            "median": -34.9716796875,
+            "nmad": 24.321733474731445,
+            "rmse": 47.78793716430664,
+            "le90": 63.70976638793945
+          },
+          "phot": {
+            "n": 13118,
+            "median": -0.533447265625,
+            "nmad": 69.8106918334961,
+            "rmse": 77.28764343261719,
+            "le90": 100.70722961425781
+          }
+        },
+        "best": "D_strips_kept",
+        "adopt": true
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Langtang void cells (no accepted HMA stereo): current Copernicus fill 32.72 m RMSE vs 2 m reference; best D_strips_kept 14.25 m. Held-out photons in voids: 77.30 vs 66.43 m. ADOPT.",
+      "spawned_hypotheses": [
+        "H_VOID_FILL_NATIONAL"
+      ]
+    },
+    {
+      "id": "EXP031",
+      "hypothesis_id": "H_BARE_GUARD",
+      "name": "DTM = DEM on bare ground",
+      "status": "completed",
+      "parent_id": "EXP030",
+      "created": "2026-11-09T13:36:42.761721+00:00",
+      "completed": "2026-11-09T13:36:42.761721+00:00",
+      "area": "khumbu+langtang",
+      "config": {
+        "bare_wc": [
+          60,
+          70,
+          100
+        ],
+        "product": "v2 before EXP030"
+      },
+      "results": {
+        "dgps": {
+          "margins": {
+            "dem": {
+              "n": 83,
+              "median": -1.5919023437500073,
+              "nmad": 1.5551095645307387,
+              "rmse": 2.4657399891554257
+            },
+            "dtm": {
+              "n": 83,
+              "median": -2.5265781250000146,
+              "nmad": 1.3779840374999244,
+              "rmse": 3.483126125363202
+            },
+            "guard_bare": {
+              "n": 83,
+              "median": -1.7030976562500655,
+              "nmad": 1.3881722793747582,
+              "rmse": 2.655518086757303
+            },
+            "guard_nontree": {
+              "n": 83,
+              "median": -1.5919023437500073,
+              "nmad": 1.5551095645307387,
+              "rmse": 2.4657399891554257
+            },
+            "wc": {
+              "30": 13,
+              "60": 21,
+              "70": 3,
+              "80": 2,
+              "100": 44
+            }
+          },
+          "glacier surface": {
+            "dem": {
+              "n": 388,
+              "median": -0.5114523437500793,
+              "nmad": 1.6219661374216958,
+              "rmse": 2.5117345829015116
+            },
+            "dtm": {
+              "n": 388,
+              "median": -4.968587109375221,
+              "nmad": 2.696225665546518,
+              "rmse": 6.1508562710473385
+            },
+            "guard_bare": {
+              "n": 388,
+              "median": -0.537451171875091,
+              "nmad": 1.6083968725779836,
+              "rmse": 2.5218111725964585
+            },
+            "guard_nontree": {
+              "n": 388,
+              "median": -0.5114523437500793,
+              "nmad": 1.6219661374216958,
+              "rmse": 2.5117345829015116
+            },
+            "wc": {
+              "60": 6,
+              "70": 379,
+              "80": 3
+            }
+          },
+          "wind tower": {
+            "dem": {
+              "n": 85,
+              "median": -0.8686953124997672,
+              "nmad": 0.7608703199991327,
+              "rmse": 1.191820473199954
+            },
+            "dtm": {
+              "n": 85,
+              "median": -7.653346875000352,
+              "nmad": 2.107856434686706,
+              "rmse": 7.63124820827988
+            },
+            "guard_bare": {
+              "n": 85,
+              "median": -0.8686953124997672,
+              "nmad": 0.7608703199991327,
+              "rmse": 1.191820473199954
+            },
+            "guard_nontree": {
+              "n": 85,
+              "median": -0.8686953124997672,
+              "nmad": 0.7608703199991327,
+              "rmse": 1.191820473199954
+            },
+            "wc": {
+              "70": 85
+            }
+          }
+        },
+        "langtang": {
+          "all": {
+            "dem": {
+              "n": 1228353,
+              "median": -0.28515625,
+              "nmad": 0.9852629899978638,
+              "rmse": 8.669309616088867
+            },
+            "dtm": {
+              "n": 1228353,
+              "median": -2.96240234375,
+              "nmad": 2.3603599071502686,
+              "rmse": 8.879362106323242
+            },
+            "guard_bare": {
+              "n": 1228353,
+              "median": -0.8583984375,
+              "nmad": 1.8221211433410645,
+              "rmse": 9.34485912322998
+            },
+            "guard_nontree": {
+              "n": 1228353,
+              "median": -0.353515625,
+              "nmad": 1.0952997207641602,
+              "rmse": 9.346393585205078
+            }
+          },
+          "bare/snow": {
+            "dem": {
+              "n": 751818,
+              "median": -0.158203125,
+              "nmad": 0.9606494903564453,
+              "rmse": 9.585771560668945
+            },
+            "dtm": {
+              "n": 751818,
+              "median": -3.00927734375,
+              "nmad": 2.372304677963257,
+              "rmse": 8.833267211914062
+            },
+            "guard_bare": {
+              "n": 751818,
+              "median": -0.158203125,
+              "nmad": 0.9606494903564453,
+              "rmse": 9.585771560668945
+            },
+            "guard_nontree": {
+              "n": 751818,
+              "median": -0.158203125,
+              "nmad": 0.9606494903564453,
+              "rmse": 9.585771560668945
+            }
+          },
+          "tree": {
+            "dem": {
+              "n": 114964,
+              "median": -0.82666015625,
+              "nmad": 1.315735101699829,
+              "rmse": 6.057781219482422
+            },
+            "dtm": {
+              "n": 114964,
+              "median": -8.3607177734375,
+              "nmad": 7.225322246551514,
+              "rmse": 12.9240083694458
+            },
+            "guard_bare": {
+              "n": 114964,
+              "median": -8.3607177734375,
+              "nmad": 7.225322246551514,
+              "rmse": 12.9240083694458
+            },
+            "guard_nontree": {
+              "n": 114964,
+              "median": -8.3607177734375,
+              "nmad": 7.225322246551514,
+              "rmse": 12.9240083694458
+            }
+          },
+          "other veg": {
+            "dem": {
+              "n": 361571,
+              "median": -0.417724609375,
+              "nmad": 0.854594349861145,
+              "rmse": 7.2524871826171875
+            },
+            "dtm": {
+              "n": 361571,
+              "median": -2.396484375,
+              "nmad": 1.6418635845184326,
+              "rmse": 7.245765209197998
+            },
+            "guard_bare": {
+              "n": 361571,
+              "median": -2.396484375,
+              "nmad": 1.6418635845184326,
+              "rmse": 7.245765209197998
+            },
+            "guard_nontree": {
+              "n": 361571,
+              "median": -0.417724609375,
+              "nmad": 0.854594349861145,
+              "rmse": 7.2524871826171875
+            }
+          }
+        },
+        "adopt": false,
+        "photons_holdout": {
+          "all": {
+            "v2": {
+              "n": 19826878,
+              "bias": -0.07335645705461502,
+              "median": -0.0951690673828125,
+              "rmse": 5.262483596801758,
+              "nmad": 0.8492327928543091,
+              "le90": 3.98876953125
+            },
+            "v2_bare_rule": {
+              "n": 19826878,
+              "bias": 0.5905356407165527,
+              "median": 0.01220703125,
+              "rmse": 5.811855316162109,
+              "nmad": 0.8484410047531128,
+              "le90": 4.50439453125
+            }
+          },
+          "bare/snow": {
+            "v2": {
+              "n": 8922983,
+              "bias": -0.0874328687787056,
+              "median": -0.26513671875,
+              "rmse": 6.520554542541504,
+              "nmad": 1.4339499473571777,
+              "le90": 4.86279296875
+            },
+            "v2_bare_rule": {
+              "n": 8922983,
+              "bias": 1.3877360820770264,
+              "median": 0.1640625,
+              "rmse": 7.4857282638549805,
+              "nmad": 1.4949066638946533,
+              "le90": 6.36083984375
+            }
+          },
+          "non-tree": {
+            "v2": {
+              "n": 17783719,
+              "bias": -0.08896113187074661,
+              "median": -0.09870147705078125,
+              "rmse": 5.070291996002197,
+              "nmad": 0.7629159688949585,
+              "le90": 3.515625
+            },
+            "v2_bare_rule": {
+              "n": 17783719,
+              "bias": 0.6512051224708557,
+              "median": 0.01318359375,
+              "rmse": 5.700067043304443,
+              "nmad": 0.7632779479026794,
+              "le90": 3.9658203125
+            }
+          }
+        }
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "[v2 before EXP030] Langtang DTM 8.88 -> guard_bare 9.34 m (guard_nontree 9.35, DEM 8.67); Khumbu wind tower 7.63 -> 1.19 m. Reject. CORRECTION: Langtang 2 m is a stereo DSM (canopy top), invalid for judging a DTM; on bare-ground dGPS the guard fixes the DTM (wind tower 7.63->1.19, glacier surface 6.15->2.52 m). Decide on held-out ICESat-2 ground photons by land cover after the EXP030 rebuild. PHOTON DECISION: on 19.8 M held-out ATL03 ground photons the rule is worse: all 5.26 -> 5.81 m, bare/snow (8.9 M) 6.52 -> 7.49 m. The Khumbu dGPS gain is local (debris-covered glacier). REJECTED; DTM kept as is.",
+      "spawned_hypotheses": [
+        "H_BARE_GUARD_PHOTONS"
+      ]
+    },
+    {
+      "id": "EXP032",
+      "hypothesis_id": "H_INSAR_STACK",
+      "name": "Multi-baseline Sentinel-1 InSAR height correction",
+      "status": "completed",
+      "parent_id": "EXP030",
+      "created": "2026-11-16T17:40:47.611876+00:00",
+      "completed": "2026-11-16T17:40:47.611876+00:00",
+      "area": "langtang",
+      "config": {
+        "max_dt_days": 36,
+        "min_dbperp_m": 80.0,
+        "per_stack": 24,
+        "looks": "10x2"
+      },
+      "results": {
+        "ref_2m": {
+          "all cells": {
+            "copernicus": {
+              "n": 1228353,
+              "bias": -0.08032753318548203,
+              "median": 0.595703125,
+              "rmse": 13.964719772338867,
+              "nmad": 5.733129978179932,
+              "le90": 21.5224609375
+            },
+            "copernicus+dh": {
+              "n": 1228353,
+              "bias": -0.11796996742486954,
+              "median": 0.54296875,
+              "rmse": 13.955146789550781,
+              "nmad": 5.732044219970703,
+              "le90": 21.501953125
+            }
+          },
+          "v2 Copernicus-fill cells": {
+            "copernicus": null,
+            "copernicus+dh": null
+          },
+          "cells with dh": {
+            "copernicus": {
+              "n": 860346,
+              "bias": 0.2919579744338989,
+              "median": 0.8140869140625,
+              "rmse": 12.701586723327637,
+              "nmad": 5.594679355621338,
+              "le90": 19.990478515625
+            },
+            "copernicus+dh": {
+              "n": 860346,
+              "bias": 0.23821431398391724,
+              "median": 0.7421875,
+              "rmse": 12.686555862426758,
+              "nmad": 5.603185653686523,
+              "le90": 19.949951171875
+            }
+          }
+        },
+        "photons": {
+          "all photons": {
+            "copernicus": {
+              "n": 2115,
+              "bias": 1.3256655931472778,
+              "median": 0.57421875,
+              "rmse": 4.275444030761719,
+              "nmad": 2.458451986312866,
+              "le90": 7.495214939117432
+            },
+            "copernicus+dh": {
+              "n": 2115,
+              "bias": 1.2290191650390625,
+              "median": 0.4541015625,
+              "rmse": 4.2550835609436035,
+              "nmad": 2.5105745792388916,
+              "le90": 7.39404296875
+            }
+          },
+          "photons on v2 fill": {
+            "copernicus": null,
+            "copernicus+dh": null
+          }
+        },
+        "gain_fill": 0.001183384503707141,
+        "gate_passed": false
+      },
+      "sideeffects": [],
+      "checkpoint": null,
+      "conclusion": "Sentinel-1 multi-baseline stack at Langtang: on v2 Copernicus-fill cells against the 2 m composite Copernicus 12.70 m -> 12.69 m with the InSAR height correction (+0.1%). Gate (>=10%) FAILED.",
+      "spawned_hypotheses": []
+    }
+  ],
+  "best_rmse": {
+    "all": 7.585,
+    "experiment_id": "EXP024",
+    "config": "best_plus_strips",
+    "forest_steep": 9.805
+  },
+  "total_experiments": 32,
+  "next_experiment_id": 33,
+  "national_n": 13266452
+}
