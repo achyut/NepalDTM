@@ -1,11 +1,12 @@
 cff-version: 1.2.0
-message: "If you use NepalDTM, please cite the paper. Replace the arXiv identifier after it is announced."
+message: "If you use NepalDTM, please cite the EarthArXiv preprint."
 title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
 authors:
   - family-names: Paudel
     given-names: Achyut
     email: achyut.pdl@gmail.com
 year: 2026
+doi: "10.31223/X5DR5M"
 url: "https://github.com/achyut/NepalDTM"
 repository-code: "https://github.com/achyut/NepalDTM"
 license: MIT
@@ -16,5 +17,7 @@ preferred-citation:
     - family-names: Paudel
       given-names: Achyut
   year: 2026
-  url: "https://github.com/achyut/NepalDTM"
-  notes: "arXiv identifier not yet assigned. Primary category physics.geo-ph."
+  doi: "10.31223/X5DR5M"
+  url: "https://doi.org/10.31223/X5DR5M"
+  journal: "EarthArXiv"
+  notes: "Preprint, version 1, published 2026-10-24."

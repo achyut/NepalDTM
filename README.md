@@ -68,20 +68,18 @@ A national run downloads tens of gigabytes. Cells and tiles already on disk are 
 
 ## Citation
 
-Please cite the paper. The arXiv identifier below is a placeholder until the paper is announced. Replace `XXXX.XXXXX` with the identifier arXiv assigns.
+Please cite the v1 preprint on EarthArXiv: https://doi.org/10.31223/X5DR5M
 
-Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model of Nepal from multi-source satellite data fusion. https://github.com/achyut/NepalDTM
+Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model of Nepal from multi-source satellite data fusion. EarthArXiv. https://doi.org/10.31223/X5DR5M
 
 ```bibtex
-@article{paudel2026nepaldtm,
-  author        = {Paudel, Achyut},
-  title         = {{NepalDTM}: A National 8-Metre Bare-Earth Digital Terrain Model of {Nepal} from Multi-Source Satellite Data Fusion},
-  year          = {2026},
-  journal       = {arXiv preprint arXiv:XXXX.XXXXX},
-  archiveprefix = {arXiv},
-  eprint        = {XXXX.XXXXX},
-  primaryclass  = {physics.geo-ph},
-  url           = {https://github.com/achyut/NepalDTM}
+@misc{paudel2026nepaldtm,
+  author       = {Paudel, Achyut},
+  title        = {{NepalDTM}: A National 8-Metre Bare-Earth Digital Terrain Model of {Nepal} from Multi-Source Satellite Data Fusion},
+  year         = {2026},
+  howpublished = {EarthArXiv preprint, version 1},
+  doi          = {10.31223/X5DR5M},
+  url          = {https://doi.org/10.31223/X5DR5M}
 }
 ```
 
