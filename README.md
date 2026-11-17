@@ -67,8 +67,10 @@ Then open http://127.0.0.1:8000/
 
 | Product | URL |
 |---|---|
-| Map (PMTiles) | https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/NepalDTM.pmtiles |
-| Cloud Optimized GeoTIFF tiles | https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/cog/ |
+| NepalDTM-G 1 m test overlay (Churia) | https://nepaldtm-data.achyutpdl.com/g/NepalDTM_G_test.webp.pmtiles |
+| v2 web map tiles | https://nepaldtm-data.achyutpdl.com/v2/NepalDTM_v2.webp.pmtiles |
+| v1 web map tiles | https://nepaldtm-data.achyutpdl.com/NepalDTM.pmtiles |
+| v1 Cloud Optimized GeoTIFF tiles | prefix `https://nepaldtm-data.achyutpdl.com/cog/` |
 
 Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an error file. The code writes VRT mosaics that point at a local `out/` folder.
 
@@ -94,20 +96,23 @@ A national run downloads tens of gigabytes. Cells and tiles already on disk are 
 
 ## Citation
 
-Please cite the paper. The arXiv identifier below is a placeholder until the paper is announced. Replace `XXXX.XXXXX` with the identifier arXiv assigns.
-
-Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model of Nepal from multi-source satellite data fusion. https://github.com/achyut/NepalDTM
+NepalDTM-G is work in progress; the paper source is in `paper/g/`. Cite it, and the v2 model it downscales:
 
 ```bibtex
-@article{paudel2026nepaldtm,
-  author        = {Paudel, Achyut},
-  title         = {{NepalDTM}: A National 8-Metre Bare-Earth Digital Terrain Model of {Nepal} from Multi-Source Satellite Data Fusion},
-  year          = {2026},
-  journal       = {arXiv preprint arXiv:XXXX.XXXXX},
-  archiveprefix = {arXiv},
-  eprint        = {XXXX.XXXXX},
-  primaryclass  = {physics.geo-ph},
-  url           = {https://github.com/achyut/NepalDTM}
+@misc{paudel2026nepaldtmg,
+  author       = {Paudel, Achyut},
+  title        = {{NepalDTM-G}: Mass-Preserving Generative Downscaling of {Nepal}'s National 8~m Terrain Model to 1~m},
+  year         = {2026},
+  howpublished = {Preprint in preparation},
+  url          = {https://github.com/achyut/NepalDTM/tree/g}
+}
+
+@misc{paudel2026nepaldtmv2,
+  author       = {Paudel, Achyut},
+  title        = {{NepalDTM} v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of {Nepal}},
+  year         = {2026},
+  howpublished = {EarthArXiv preprint (DOI pending)},
+  url          = {https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf}
 }
 ```
 

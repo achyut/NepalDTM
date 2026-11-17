@@ -1,20 +1,28 @@
 cff-version: 1.2.0
-message: "If you use NepalDTM, please cite the paper. Replace the arXiv identifier after it is announced."
-title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
+message: "If you use NepalDTM-G, please cite it and the NepalDTM v2 paper."
+title: "NepalDTM-G: Mass-Preserving Generative Downscaling of Nepal's National 8 m Terrain Model to 1 m"
 authors:
   - family-names: Paudel
     given-names: Achyut
     email: achyut.pdl@gmail.com
-year: 2026
-url: "https://github.com/achyut/NepalDTM"
+url: "https://nepaldtm.achyutpdl.com"
 repository-code: "https://github.com/achyut/NepalDTM"
 license: MIT
 preferred-citation:
   type: article
-  title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
+  title: "NepalDTM-G: Mass-Preserving Generative Downscaling of Nepal's National 8 m Terrain Model to 1 m"
   authors:
     - family-names: Paudel
       given-names: Achyut
   year: 2026
-  url: "https://github.com/achyut/NepalDTM"
-  notes: "arXiv identifier not yet assigned. Primary category physics.geo-ph."
+  url: "https://github.com/achyut/NepalDTM/tree/g"
+  notes: "Preprint in preparation."
+references:
+  - type: article
+    title: "NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of Nepal"
+    authors:
+      - family-names: Paudel
+        given-names: Achyut
+    year: 2026
+    url: "https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf"
+    notes: "EarthArXiv preprint; DOI pending."
