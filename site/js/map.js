@@ -212,7 +212,7 @@ const map = new maplibregl.Map({
     pitch: 0,
     maxBounds: MAX_BOUNDS,
     minZoom: 5.5,
-    maxZoom: 18,
+    maxZoom: 22,  // past 17 (G) or 14 (v1, v2) this magnifies; it adds no detail
     maxPitch: 85,
     hash: true,
     attributionControl: false,
