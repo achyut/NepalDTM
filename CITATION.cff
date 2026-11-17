@@ -1,20 +1,37 @@
 cff-version: 1.2.0
-message: "If you use NepalDTM, please cite the paper. Replace the arXiv identifier after it is announced."
-title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
+message: "If you use NepalDTM v2, please cite the v2 paper. The EarthArXiv DOI will be added when it is assigned."
+title: "NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of Nepal"
+version: "2.0"
+date-released: 2026-11-17
 authors:
   - family-names: Paudel
     given-names: Achyut
     email: achyut.pdl@gmail.com
-year: 2026
-url: "https://github.com/achyut/NepalDTM"
+url: "https://nepaldtm.achyutpdl.com"
 repository-code: "https://github.com/achyut/NepalDTM"
+repository-artifact: "https://nepaldtm-data.achyutpdl.com/v2/"
 license: MIT
+keywords:
+  - digital terrain model
+  - Nepal
+  - ICESat-2
+  - stereo DEM
+  - Himalaya
 preferred-citation:
   type: article
-  title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
+  title: "NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of Nepal"
   authors:
     - family-names: Paudel
       given-names: Achyut
   year: 2026
-  url: "https://github.com/achyut/NepalDTM"
-  notes: "arXiv identifier not yet assigned. Primary category physics.geo-ph."
+  url: "https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf"
+  notes: "EarthArXiv preprint; DOI pending."
+references:
+  - type: article
+    title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
+    authors:
+      - family-names: Paudel
+        given-names: Achyut
+    year: 2026
+    url: "https://github.com/achyut/NepalDTM"
+    notes: "v1 (October 2026)."

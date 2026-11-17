@@ -2,11 +2,9 @@
 
 **Achyut Paudel** (achyut.pdl@gmail.com)
 
-NepalDTM is a bare-earth elevation model of Nepal on an 8 m grid. The High Mountain Asia 8 m stereo mosaic is the surface where it exists. Copernicus GLO-30 fills the gaps. A model trained on 6,230,548 ICESat-2 points and 7,035,904 GEDI points predicts the height of vegetation and buildings and subtracts it.
+NepalDTM is a national surface (DEM) and bare-earth (DTM) elevation model of Nepal on an 8 m grid. This branch holds **v2** (November 2026), the current release. v1 (October 2026) is kept below for reference; its code and paper are on `main`.
 
-On 4,463,463 held-out ICESat-2 points inside Nepal, with whole 48 km blocks left out of training, the RMSE is 6.10 m. Copernicus GLO-30 on the same points is 9.07 m. Inside the delivered grid, 37% of the area uses the 8 m mosaic and 63% is Copernicus fill, so the file spacing is not 8 m terrain detail everywhere.
-
-The paper is [`paper/paper.tex`](paper/paper.tex), with the figures in [`paper/figures`](paper/figures). The longer guide is [`paper/whitepaper.tex`](paper/whitepaper.tex). Both quote [`validation/validation_report.json`](validation/validation_report.json).
+Map with a v1/v2 switch: https://nepaldtm.achyutpdl.com/map
 
 ## v2 (November 2026)
 
@@ -31,7 +29,9 @@ within this table only.
 - Data: `https://nepaldtm-data.achyutpdl.com/v2/` (DEM, DTM and aux COGs in `out_v2/`, VRT mosaics, and
   `NepalDTM_v2.webp.pmtiles` for web maps); map with a v1/v2 switch at https://nepaldtm.achyutpdl.com/map
 
-## Results
+## v1 results (October 2026)
+
+v1 used the High Mountain Asia 8 m stereo mosaic where it exists and Copernicus GLO-30 elsewhere (37% / 63% of the area), with a model trained on 6,230,548 ICESat-2 points and 7,035,904 GEDI points removing vegetation and buildings. The v1 paper is [`paper/paper.tex`](paper/paper.tex) and the guide [`paper/whitepaper.tex`](paper/whitepaper.tex); both quote [`validation/validation_report.json`](validation/validation_report.json).
 
 Spatial holdout, 4,463,463 ICESat-2 points inside Nepal:
 
@@ -54,10 +54,12 @@ Then open http://127.0.0.1:8000/
 
 | Product | URL |
 |---|---|
-| Map (PMTiles) | https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/NepalDTM.pmtiles |
-| Cloud Optimized GeoTIFF tiles | https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/cog/ |
+| v2 web map tiles (Terrarium WebP PMTiles) | https://nepaldtm-data.achyutpdl.com/v2/NepalDTM_v2.webp.pmtiles |
+| v2 Cloud Optimized GeoTIFF tiles (DEM, DTM, aux) | prefix `https://nepaldtm-data.achyutpdl.com/v2/out_v2/` |
+| v1 web map tiles (PMTiles) | https://nepaldtm-data.achyutpdl.com/NepalDTM.pmtiles |
+| v1 Cloud Optimized GeoTIFF tiles | prefix `https://nepaldtm-data.achyutpdl.com/cog/` |
 
-Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an error file. The code writes VRT mosaics that point at a local `out/` folder.
+The COG prefixes are folders of files, not browsable pages. Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an aux file. In v2 the aux file's band 1 is the source (1 = adjusted HMA stereo, 2 = Copernicus fill) and band 2 is the expected error in decimetres. The code writes VRT mosaics that point at the local output folder.
 
 ## Reproduce
 
@@ -76,25 +78,36 @@ cd code
 | `python run.py fuse` | Train the bare-earth correction and write the tiles |
 | `python run.py validate` | Held-out scores, differential GPS, contours, and seams |
 | `python run.py all` | Every step |
+| `bash run_v2.sh` | v2 after the v1 inputs exist: ATL03 photons, strip ties, joint adjustment, restack, retrain, apply, validate, tiles |
 
 A national run downloads tens of gigabytes. Cells and tiles already on disk are skipped. Put a NASA Earthdata token in `~/.earthdata_token`. That file is not part of this repository.
 
 ## Citation
 
-Please cite the paper. The arXiv identifier below is a placeholder until the paper is announced. Replace `XXXX.XXXXX` with the identifier arXiv assigns.
+If you use v2, please cite the v2 paper. It is being submitted to EarthArXiv; the DOI will be added here when it is assigned.
 
-Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model of Nepal from multi-source satellite data fusion. https://github.com/achyut/NepalDTM
+Paudel, A. (2026). NepalDTM v2: Photon-controlled joint adjustment of stereo strips for a national terrain model of Nepal. EarthArXiv preprint. https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf
 
 ```bibtex
-@article{paudel2026nepaldtm,
-  author        = {Paudel, Achyut},
-  title         = {{NepalDTM}: A National 8-Metre Bare-Earth Digital Terrain Model of {Nepal} from Multi-Source Satellite Data Fusion},
-  year          = {2026},
-  journal       = {arXiv preprint arXiv:XXXX.XXXXX},
-  archiveprefix = {arXiv},
-  eprint        = {XXXX.XXXXX},
-  primaryclass  = {physics.geo-ph},
-  url           = {https://github.com/achyut/NepalDTM}
+@misc{paudel2026nepaldtmv2,
+  author       = {Paudel, Achyut},
+  title        = {{NepalDTM} v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of {Nepal}},
+  year         = {2026},
+  howpublished = {EarthArXiv preprint (DOI pending)},
+  url          = {https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf},
+  note         = {Code: https://github.com/achyut/NepalDTM (branch v2)}
+}
+```
+
+v1:
+
+```bibtex
+@misc{paudel2026nepaldtm,
+  author       = {Paudel, Achyut},
+  title        = {{NepalDTM}: A National 8-Metre Bare-Earth Digital Terrain Model of {Nepal} from Multi-Source Satellite Data Fusion},
+  year         = {2026},
+  howpublished = {Preprint},
+  url          = {https://github.com/achyut/NepalDTM}
 }
 ```
 
@@ -104,6 +117,9 @@ Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model
 - ICESat-2 ATL08: Neuenschwander and Pitts (2019); the mission is Markus et al. (2017)
 - GEDI L2A: Dubayah et al. (2020)
 - HMA DEM 8 m: Shean (2017), NASA NSIDC, doi:10.5067/KXOVQ9L172S2
+- HMA 8 m stereo strips (v2): Shean (2017), along-track doi:10.5067/GSACB044M4PK, cross-track doi:10.5067/0MCWJJH5ABYO
+- ICESat-2 ATL03 photons (v2): Neumann et al. (2019), doi:10.1016/j.rse.2019.111325, accessed with SlideRule (Shean et al. 2023, doi:10.21105/joss.04982)
+- Langtang 2 m stereo composite (v2 validation): Shean and Bhushan (2026), doi:10.5281/zenodo.22842748
 - Canopy height: Tolan et al. (2024)
 - ESA WorldCover 2021 v200: Zanaga et al. (2022), doi:10.5281/zenodo.7254221
 - EGM2008: Pavlis et al. (2012)
