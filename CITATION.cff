@@ -24,5 +24,7 @@ references:
       - family-names: Paudel
         given-names: Achyut
     year: 2026
-    url: "https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf"
-    notes: "EarthArXiv preprint; DOI pending."
+    doi: "10.31223/X5B23B"
+    url: "https://doi.org/10.31223/X5B23B"
+    journal: "EarthArXiv"
+    notes: "Preprint, published 2026-11-18."

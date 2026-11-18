@@ -24,7 +24,7 @@ Over every 8 m cell of the Langtang 2 m stereo composite the DEM error falls fro
 (Copernicus 13.96 m). These photon RMSEs are on a different point set from the v1 table above, so compare columns
 within this table only.
 
-- Paper: [`paper/v2/paper_v2.pdf`](paper/v2/paper_v2.pdf) (source [`paper/v2/paper_v2.tex`](paper/v2/paper_v2.tex))
+- Paper: EarthArXiv, https://doi.org/10.31223/X5B23B (PDF [`paper/v2/paper_v2.pdf`](paper/v2/paper_v2.pdf), source [`paper/v2/paper_v2.tex`](paper/v2/paper_v2.tex))
 - Validation: [`validation/validation_report_v2.json`](validation/validation_report_v2.json),
   [`validation/validation_v1_v2.json`](validation/validation_v1_v2.json)
 - Build: [`code/run_v2.sh`](code/run_v2.sh) runs the whole v2 chain after the v1 inputs are in `code/data/nw/`
@@ -115,8 +115,9 @@ NepalDTM-G is work in progress; the paper source is in `paper/g/`. Cite it, and 
   author       = {Paudel, Achyut},
   title        = {{NepalDTM} v2: Improving on {NepalDTM} v1 with {ICESat-2}-Adjusted Stereo Strips for a National 8~m Terrain Model of {Nepal}},
   year         = {2026},
-  howpublished = {EarthArXiv preprint (DOI pending)},
-  url          = {https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf}
+  howpublished = {EarthArXiv preprint},
+  doi          = {10.31223/X5B23B},
+  url          = {https://doi.org/10.31223/X5B23B}
 }
 ```
 
