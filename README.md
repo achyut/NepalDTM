@@ -28,7 +28,7 @@ within this table only.
 - Validation: [`validation/validation_report_v2.json`](validation/validation_report_v2.json),
   [`validation/validation_v1_v2.json`](validation/validation_v1_v2.json)
 - Build: [`code/run_v2.sh`](code/run_v2.sh) runs the whole v2 chain after the v1 inputs are in `code/data/nw/`
-- Data: `https://nepaldtm-data.achyutpdl.com/v2/` (DEM, DTM and aux COGs in `out_v2/`, VRT mosaics, and
+- Data: Zenodo, [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) (DEM, DTM and aux COG tiles, and
   `NepalDTM_v2.webp.pmtiles` for web maps); map with a v1/v2 switch at https://nepaldtm.achyutpdl.com/map
 
 ## NepalDTM-G: generated 1 m (experimental)
@@ -65,12 +65,16 @@ Then open http://127.0.0.1:8000/
 
 ## Data
 
-| Product | URL |
+| Product | Archive (Zenodo, DOI) |
 |---|---|
-| NepalDTM-G 1 m test overlay (Churia) | https://nepaldtm-data.achyutpdl.com/g/NepalDTM_G_test.webp.pmtiles |
-| v2 web map tiles | https://nepaldtm-data.achyutpdl.com/v2/NepalDTM_v2.webp.pmtiles |
-| v1 web map tiles | https://nepaldtm-data.achyutpdl.com/NepalDTM.pmtiles |
-| v1 Cloud Optimized GeoTIFF tiles | prefix `https://nepaldtm-data.achyutpdl.com/cog/` |
+| v2 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) |
+| v1 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327066](https://doi.org/10.5281/zenodo.24327066) |
+
+Zenodo is the archived copy to download and cite. The web map and quick single-tile access stream from a mirror at
+`https://nepaldtm-data.achyutpdl.com` (v1 COGs under `cog/`, v2 under `v2/out_v2/`), e.g.
+`gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif`.
+The NepalDTM-G 1 m test overlay (Churia) is at
+`https://nepaldtm-data.achyutpdl.com/g/NepalDTM_G_test.webp.pmtiles`; it will be archived with the G paper.
 
 Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an error file. The code writes VRT mosaics that point at a local `out/` folder.
 
