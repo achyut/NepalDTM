@@ -1,4 +1,4 @@
-% arXiv submission. Compile from this directory:
+% EarthArXiv preprint, doi:10.31223/X5DR5M. Compile from this directory:
 %   tectonic paper.tex
 %   or: pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper
 \documentclass[11pt]{article}
@@ -411,14 +411,20 @@ Terrain shape at that spacing exists where the HMA mosaic supplies the surface, 
 Elsewhere the hills and valleys are still the Copernicus 30~m shape, with a canopy adjustment on top.
 Above 40~degrees the RMSE exceeds 10~m.
 Glacier ice is the other weak place: the bare-earth model sits several metres below the 2015--2016 glacier-surface GPS.
+Summits read low.
+For 406 summits found in the model and matched to a named OpenStreetMap peak with a recorded height, the highest 8~m cell is a median 21.2~m below that height (RMSE 66.4~m).
+The gap is 16.3~m where the HMA mosaic supplies the surface and 32.8~m in Copernicus fill (\texttt{validation/summit\_check.json}).
+A sharp summit is narrower than the patch a stereo or radar height represents, so its top is averaged with the slopes below.
+The OpenStreetMap heights (\copyright~OpenStreetMap contributors, ODbL) mostly come from published surveys but are not controlled, so this is a check, not an accuracy figure.
 The predicted-error band is a model of the absolute residual, not a second survey.
 
 \section{Data and code}
 
-Cloud Optimized GeoTIFF tiles, with the surface, the bare earth, and the predicted absolute error, are at
-\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/cog/}.
-The web map reads
-\url{https://pub-7a51429102ce456f85c0aee664338f8f.r2.dev/NepalDTM.pmtiles}.
+The data are archived on Zenodo, \url{https://doi.org/10.5281/zenodo.24327066}: Cloud Optimized GeoTIFF tiles
+with the surface, the bare earth, and the predicted absolute error, the web-map PMTiles, and the validation file.
+Single tiles can also be streamed from \url{https://nepaldtm-data.achyutpdl.com/cog/}.
+The web map at \url{https://nepaldtm.achyutpdl.com} reads
+\url{https://nepaldtm-data.achyutpdl.com/NepalDTM.webp.pmtiles}.
 The code that rebuilds the model, and the validation file this paper quotes, are at
 \url{https://github.com/achyut/NepalDTM}.
 From the \texttt{code} directory, \texttt{python run.py all} downloads the inputs, fits the correction, writes the tiles, and runs the validation.
