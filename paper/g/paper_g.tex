@@ -42,7 +42,7 @@ resemble the real 8~m product rather than clean block averages.
 A mass-preserving projection makes every $8\times8$~m block of the output average to the corresponding M cell; we
 show that the obvious block-constant form of this constraint prints an 8~m grid into the 1~m surface, and that a
 smooth iterated form removes it.
-On held-out lidar patches, the median of four G samples is 2.8\% more accurate than bicubic interpolation in height
+On held-out lidar patches at 50{,}000 training steps, the median of four G samples is 2.7\% more accurate than bicubic interpolation in height
 and matches the true slope field better (correlation 0.69 against 0.63).
 Applied to two areas of Chitwan, G keeps the accuracy of its input against held-out ICESat-2 photons (floodplain:
 1.99~m RMSE against 1.98~m for M on 117{,}703 photons; Churia hills: 11.67~m against 11.63~m on 1{,}610 photons)
@@ -205,7 +205,7 @@ Rare void cells in M are filled from their nearest neighbour before generation a
 \section{Results}
 \subsection{Training}
 The $v$-prediction loss falls quickly over the first 2{,}000 steps and then slowly (Figure~\ref{fig:loss}).
-This paper reports checkpoints up to 30{,}000 of a planned 150{,}000 steps.
+This paper reports checkpoints up to 50{,}000 of a planned 150{,}000 steps.
 \fig{fig01_training_loss}{Training loss (running mean). The run was paused and resumed at 24{,}000 steps.}{fig:loss}
 
 \subsection{Held-out lidar patches}
@@ -213,16 +213,18 @@ This paper reports checkpoints up to 30{,}000 of a planned 150{,}000 steps.
 Each evaluation degrades held-out patches with the error model and compares the 1~m outputs with the true lidar
 (Table~\ref{tab:heldout}, Figure~\ref{fig:heldout}).
 Each held-out patch is degraded with a fixed seed (its own index), so a given set of patches always has the same
-inputs. The evaluations at 4{,}000 and 12{,}000 steps used the same 64 patches and are directly comparable; the one at
-30{,}000 steps used 256 patches, so its absolute numbers differ and only the comparison within that row is meaningful.
+inputs. The evaluations at 4{,}000 and 12{,}000 steps used the same 64 patches and are directly comparable; those at
+30{,}000 and 50{,}000 steps used the same 256 patches, so they are comparable with each other but not with the first two;
+from 50{,}000 steps the diffusion noise is also seeded, so the evaluation is fully repeatable.
 In height, a single G sample is no better than bicubic interpolation; the median of four is 2.3--2.8\% better, and
-the gap has widened slowly with training.
-The clearer signal is in shape: at 30{,}000 steps the slope map of G correlates with the true slope map at 0.69,
+the gap widened slowly up to 30{,}000 steps and did not change from 30{,}000 to 50{,}000 (1.258 and 1.259~m,
+against 1.294~m for bicubic).
+The clearer signal is in shape: at 30{,}000 and 50{,}000 steps the slope map of G correlates with the true slope map at 0.69,
 against 0.63 for bicubic, so the added relief is partly right, not only plausible.
 \begin{table}[!htbp]
 \centering
 \caption{Held-out lidar patches: RMSE (m) against the true 1~m surface, and correlation of slope maps with the
-true slope map. The 4{,}000 and 12{,}000 rows share the same 64 patches; the 30{,}000 row uses 256.}
+true slope map. The 4{,}000 and 12{,}000 rows share the same 64 patches; the 30{,}000 and 50{,}000 rows share 256.}
 \label{tab:heldout}
 \begin{tabular}{rrrrrrrr}
 \toprule
@@ -232,6 +234,7 @@ Step & Patches & 8~m nearest & bicubic & G, 1 sample & G, median of 4 & bicubic 
 4{,}000 & 64 & 1.844 & 1.186 & 1.185 & 1.159 & 0.628 & 0.639 \\
 12{,}000 & 64 & 1.844 & 1.186 & 1.198 & 1.158 & 0.628 & 0.632 \\
 30{,}000 & 256 & 1.994 & 1.294 & 1.300 & 1.258 & 0.627 & 0.691 \\
+50{,}000 & 256 & 1.994 & 1.294 & 1.297 & 1.259 & 0.627 & 0.693 \\
 \bottomrule
 \end{tabular}
 \end{table}
