@@ -46,6 +46,7 @@ scores 5.26~m RMSE (0.85~m NMAD), against 6.93~m for v1, 8.69~m for Copernicus G
 8.97~m for GEDTM30, and it is the most accurate of the five in every land-cover, slope and elevation class.
 Against an independent 2~m WorldView/GeoEye composite at Langtang the v2 surface error falls from 8.62 to 4.71~m.
 We also report what did not help.
+Data: \url{https://doi.org/10.5281/zenodo.24327134}; code: \url{https://github.com/achyut/NepalDTM}.
 \end{abstract}
 
 \noindent\textbf{Keywords:} NepalDTM; digital terrain model; ICESat-2 ATL03; stereo DEM strips; joint adjustment;
@@ -349,12 +350,15 @@ A single RMSE over all cells hides the split between stereo and fill; we report 
 Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{v2} (\texttt{code/run\_v2.sh} runs the full build;
 \texttt{code/strip\_adjust.py}, \texttt{code/nw\_strip\_adjust.py}, \texttt{code/fetch\_atl03.py}; experiment records in
 \texttt{validation/experiments\_registry.json}).
-Data: the v2 DEM, DTM and auxiliary layers as 324 Cloud-Optimized GeoTIFF tiles with VRT mosaics, and the DTM as
-Terrarium-encoded PMTiles for web maps, archived on Zenodo,
-\url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data} (v1: \url{https://doi.org/10.5281/zenodo.24327066}~\citep{paudel2026nepaldtmv1data}),
-and mirrored for streaming at \url{https://nepaldtm-data.achyutpdl.com/v2/}; interactive viewer at
-\url{https://nepaldtm.achyutpdl.com}.
-The Langtang and Chamoli composites are CC~BY-NC~4.0; derived products that include them inherit that licence.
+Data: NepalDTM v2 is archived on Zenodo under CC~BY~4.0,
+\url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data}: the DTM, DEM and auxiliary layers as
+324 Cloud-Optimized GeoTIFF tiles each (zipped by layer), the DTM as Terrarium-encoded PMTiles for web maps, the tile list,
+and the validation files behind every number in this paper (\texttt{validation\_report\_v2.json},
+\texttt{validation\_v1\_v2.json}).
+NepalDTM v1 is archived at \url{https://doi.org/10.5281/zenodo.24327066}~\citep{paudel2026nepaldtmv1data}.
+Single tiles can be streamed from a mirror at \url{https://nepaldtm-data.achyutpdl.com/v2/}; interactive viewer with a
+v1/v2 switch at \url{https://nepaldtm.achyutpdl.com/map}.
+The Langtang and Chamoli composites (CC~BY-NC~4.0) were used for validation only and are not part of the NepalDTM tiles.
 
 \FloatBarrier
 \bibliographystyle{plainnat}
