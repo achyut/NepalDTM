@@ -113,7 +113,7 @@ NepalDTM-G is work in progress; the paper source is in `paper/g/`. Cite it, and 
 
 @misc{paudel2026nepaldtmv2,
   author       = {Paudel, Achyut},
-  title        = {{NepalDTM} v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of {Nepal}},
+  title        = {{NepalDTM} v2: Improving on {NepalDTM} v1 with {ICESat-2}-Adjusted Stereo Strips for a National 8~m Terrain Model of {Nepal}},
   year         = {2026},
   howpublished = {EarthArXiv preprint (DOI pending)},
   url          = {https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf}

@@ -19,7 +19,7 @@ preferred-citation:
   notes: "Preprint in preparation."
 references:
   - type: article
-    title: "NepalDTM v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of Nepal"
+    title: "NepalDTM v2: Improving on NepalDTM v1 with ICESat-2-Adjusted Stereo Strips for a National 8 m Terrain Model of Nepal"
     authors:
       - family-names: Paudel
         given-names: Achyut
