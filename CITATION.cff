@@ -9,7 +9,14 @@ authors:
     email: achyut.pdl@gmail.com
 url: "https://nepaldtm.achyutpdl.com"
 repository-code: "https://github.com/achyut/NepalDTM"
-repository-artifact: "https://nepaldtm-data.achyutpdl.com/v2/"
+repository-artifact: "https://doi.org/10.5281/zenodo.24327134"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.24327134"
+    description: "NepalDTM v2 data (Zenodo)"
+  - type: doi
+    value: "10.5281/zenodo.24327066"
+    description: "NepalDTM v1 data (Zenodo)"
 license: MIT
 keywords:
   - digital terrain model

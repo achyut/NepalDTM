@@ -26,7 +26,7 @@ within this table only.
 - Validation: [`validation/validation_report_v2.json`](validation/validation_report_v2.json),
   [`validation/validation_v1_v2.json`](validation/validation_v1_v2.json)
 - Build: [`code/run_v2.sh`](code/run_v2.sh) runs the whole v2 chain after the v1 inputs are in `code/data/nw/`
-- Data: `https://nepaldtm-data.achyutpdl.com/v2/` (DEM, DTM and aux COGs in `out_v2/`, VRT mosaics, and
+- Data: Zenodo, [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) (DEM, DTM and aux COG tiles, and
   `NepalDTM_v2.webp.pmtiles` for web maps); map with a v1/v2 switch at https://nepaldtm.achyutpdl.com/map
 
 ## v1 results (October 2026)
@@ -52,12 +52,14 @@ Then open http://127.0.0.1:8000/
 
 ## Data
 
-| Product | URL |
+| Product | Archive (Zenodo, DOI) |
 |---|---|
-| v2 web map tiles (Terrarium WebP PMTiles) | https://nepaldtm-data.achyutpdl.com/v2/NepalDTM_v2.webp.pmtiles |
-| v2 Cloud Optimized GeoTIFF tiles (DEM, DTM, aux) | prefix `https://nepaldtm-data.achyutpdl.com/v2/out_v2/` |
-| v1 web map tiles (PMTiles) | https://nepaldtm-data.achyutpdl.com/NepalDTM.pmtiles |
-| v1 Cloud Optimized GeoTIFF tiles | prefix `https://nepaldtm-data.achyutpdl.com/cog/` |
+| v2 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) |
+| v1 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327066](https://doi.org/10.5281/zenodo.24327066) |
+
+Zenodo is the archived copy to download and cite. The web map and quick single-tile access stream from a mirror at
+`https://nepaldtm-data.achyutpdl.com` (v1 COGs under `cog/`, v2 under `v2/out_v2/`), e.g.
+`gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif`.
 
 The COG prefixes are folders of files, not browsable pages. Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an aux file. In v2 the aux file's band 1 is the source (1 = adjusted HMA stereo, 2 = Copernicus fill) and band 2 is the expected error in decimetres. The code writes VRT mosaics that point at the local output folder.
 
