@@ -72,7 +72,22 @@ A national run downloads tens of gigabytes. Cells and tiles already on disk are 
 
 ## Citation
 
-Please cite the v1 preprint on EarthArXiv: https://doi.org/10.31223/X5DR5M
+Please cite the paper for the version you use. v2 (current): https://doi.org/10.31223/X5B23B. v1: https://doi.org/10.31223/X5DR5M.
+
+Paudel, A. (2026). NepalDTM v2: Improving on NepalDTM v1 with ICESat-2-adjusted stereo strips for a national 8 m terrain model of Nepal. EarthArXiv. https://doi.org/10.31223/X5B23B
+
+```bibtex
+@misc{paudel2026nepaldtmv2,
+  author       = {Paudel, Achyut},
+  title        = {{NepalDTM} v2: Improving on {NepalDTM} v1 with {ICESat-2}-Adjusted Stereo Strips for a National 8~m Terrain Model of {Nepal}},
+  year         = {2026},
+  howpublished = {EarthArXiv preprint},
+  doi          = {10.31223/X5B23B},
+  url          = {https://doi.org/10.31223/X5B23B}
+}
+```
+
+v1:
 
 Paudel, A. (2026). NepalDTM: A national 8-metre bare-earth digital terrain model of Nepal from multi-source satellite data fusion. EarthArXiv. https://doi.org/10.31223/X5DR5M
 
