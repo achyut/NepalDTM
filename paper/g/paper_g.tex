@@ -4,7 +4,6 @@
 \documentclass[11pt]{article}
 
 \usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
 \usepackage[margin=1in]{geometry}
 \usepackage{booktabs}
 \usepackage{amsmath}
@@ -28,6 +27,7 @@ Downscaling of NepalDTM v2}
 \small \href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
 \date{Working draft, November 2026}
 
+\setlength{\emergencystretch}{2em}
 \begin{document}
 \maketitle
 
@@ -301,6 +301,7 @@ GEDTM30 is not included: its host returned truncated byte ranges when we ran thi
 \caption{Terrain models on the same held-out ICESat-2 ground photons in the Chitwan test boxes (m; error is
 model minus photon). Best RMSE per area in bold. G is checkpoint 24{,}000.}
 \label{tab:compare}
+\small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrrrr}
 \toprule
  & & \multicolumn{3}{c}{Floodplain (101{,}604 photons)} & \multicolumn{3}{c}{Churia hills (1{,}610 photons)} \\
@@ -357,7 +358,7 @@ G will be published nationally only if it passes that gate, and then as a produc
 \section{Data and code availability}
 Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/error\_model.py},
 \texttt{code/g/make\_patches.py}, \texttt{code/g/g\_model.py}, \texttt{code/g/g\_apply.py}, \texttt{code/g/g\_tiles.py}).
-The measured 8~m model M is NepalDTM v2 (\url{https://github.com/achyut/NepalDTM}, branch \texttt{v2}).
+The measured 8~m model M is NepalDTM v2~\citep{paudel2026nepaldtmv2}: code at \url{https://github.com/achyut/NepalDTM}, branch \texttt{v2}; data at \url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data}.
 The NepalDTM-G test tiles are viewable at \url{https://nepaldtm.achyutpdl.com/map?v=g}.
 
 \FloatBarrier

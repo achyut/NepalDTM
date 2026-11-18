@@ -4,7 +4,6 @@
 \documentclass[11pt]{article}
 
 \usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
 \usepackage[margin=1in]{geometry}
 \usepackage{booktabs}
 \usepackage{amsmath}
@@ -31,6 +30,7 @@ for a National 8~m Terrain Model of Nepal}
 \small \href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
 \date{November 2026}
 
+\setlength{\emergencystretch}{2em}
 \begin{document}
 \maketitle
 
@@ -287,6 +287,7 @@ All experiments are recorded in \texttt{validation/experiments\_registry.json} o
 \centering
 \caption{Selected experiments. RMSE in metres on the national laser set (13.27~M points) unless noted.}
 \label{tab:exps}
+\small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{llrr}
 \toprule
 ID & Change & baseline & result \\
@@ -302,8 +303,8 @@ EXP024 & EXP022 + stereo-strip count, NMAD, span & 7.724 & 7.585 \\
 EXP028 & smooth per-strip correction (4~km knots), Langtang 2~m & 5.88 & 6.00 \\
 EXP029 & train on 8~m ATL03 photon cells (held-out photon cells) & 4.14 & 4.11 \\
 EXP030 & re-admit agreed strips in voids (Langtang void cells) & 32.72 & \textbf{14.25} \\
-EXP032 & Sentinel-1 72-pair InSAR height correction of Copernicus, Langtang 2~m & 12.70 & 12.69 \\
--- & GEM-15 DSM (bias removed) as fill, held-out photons on fill cells & 3.67 & 10.64 \\
+EXP032 & Sentinel-1 InSAR (72 pairs) correction of Copernicus, Langtang & 12.70 & 12.69 \\
+-- & GEM-15 DSM (debiased) as fill, held-out photons on fill cells & 3.67 & 10.64 \\
 \bottomrule
 \end{tabular}
 \end{table}
