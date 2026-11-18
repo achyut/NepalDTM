@@ -38,10 +38,14 @@ The tiles are in the `nepal-dem-8m` R2 bucket, served at `nepaldtm-data.achyutpd
 
 ## Data
 
-| Product | URL |
+| Product | Archive (Zenodo, DOI) |
 |---|---|
-| Map (PMTiles, zoom 5–14, lossless WebP, heights to 0.1 m, 3.0 GB) | https://nepaldtm-data.achyutpdl.com/NepalDTM.webp.pmtiles |
-| Cloud Optimized GeoTIFF tiles | `https://nepaldtm-data.achyutpdl.com/cog/{tile}_{dtm,dem,aux}.tif`, e.g. [`E0360N3072_dtm.tif`](https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif) |
+| v2 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) |
+| v1 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327066](https://doi.org/10.5281/zenodo.24327066) |
+
+Zenodo is the archived copy to download and cite. The web map and quick single-tile access stream from a mirror at
+`https://nepaldtm-data.achyutpdl.com` (v1 COGs under `cog/`, v2 under `v2/out_v2/`), e.g.
+`gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif`.
 
 Heights are metres above the EGM2008 geoid, on UTM zone 45N. Each tile has a surface file, a bare-earth file, and an error file. The code writes VRT mosaics that point at a local `out/` folder.
 
