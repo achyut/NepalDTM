@@ -111,6 +111,8 @@ h2.title { font: 300 clamp(30px, 3.6vw, 46px)/1.1 var(--sans); letter-spacing: -
 .bar.ours { background: var(--blue); }
 :root[data-theme="dark"] .bar.ours { background: var(--hma); }
 .bar.cop { background: var(--band); box-shadow: inset 0 0 0 1px var(--line); }
+.bar.v1 { background: var(--blue-4); opacity: .45; }
+.bar.v1 span { color: var(--ink-2); }
 .bar.cop span { color: var(--ink-3); }
 .group-label { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 20px 0 -4px; }
 details.full { margin-top: 44px; border-top: 1px solid var(--line); padding-top: 18px; }

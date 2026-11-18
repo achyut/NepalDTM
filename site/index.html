@@ -21,6 +21,7 @@
 <header class="top">
     <a class="brand" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2.5 18.5 9 7l3.6 5.6 2.6-3.6 6.3 9.5"/><path d="M6.4 11.6 9 13.4l2.2-1.5" stroke-width="1.3"/><path d="M2.5 20.5h19" stroke="#dc143c"/></svg>NepalDTM</a>
     <nav>
+        <a href="#new">What's new</a>
         <a href="#accuracy">Accuracy</a>
         <a href="#data">Data</a>
         <a href="#paper">Paper</a>
@@ -37,11 +38,11 @@
     <div id="hero-map" aria-hidden="true"></div>
     <div class="hero-copy">
         <div class="wrap">
-            <p class="eyebrow">Open data · CC BY 4.0</p>
+            <p class="eyebrow">Open data · CC BY 4.0 · v2, November 2026</p>
             <h1>The bare-earth terrain of Nepal</h1>
             <hr class="rule">
             <p class="lede">The height of the ground itself, with trees and buildings removed, on an 8 m grid for the whole country.
-                Built from satellite stereo imagery and {{n_points_m}} million laser measurements from space.</p>
+                Built from {{v2_n_strips}} satellite stereo strips, each adjusted to {{v2_n_photon_ties_m}} million laser ground returns from ICESat-2.</p>
             <div class="actions">
                 <a class="btn primary" href="/map">Explore the map
                     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
@@ -55,13 +56,12 @@
 
 <section class="stats" aria-label="Key numbers">
     <div class="wrap">
-        <div class="stat"><b>{{rmse}}<small>m</small></b><span>RMSE on {{n_heldout}} held-out ICESat-2 points</span></div>
-        <div class="stat"><b>{{rmse_gain}}<small>%</small></b><span>lower error than Copernicus GLO-30 ({{rmse_cop}} m)</span></div>
-        <div class="stat"><b>{{bias}}<small>m</small></b><span>bias, against {{bias_cop}} m for Copernicus</span></div>
-        <div class="stat"><b>{{km2}}<small>km²</small></b><span>covered in {{tiles}} tiles of 24 × 24 km</span></div>
-        <p class="stats-note">Figures above are for v1 (October 2026). v2 (November 2026) brings the held-out ICESat-2
-            RMSE to 5.26 m, against 8.69 m for Copernicus GLO-30, by jointly adjusting the stereo strips to ICESat-2
-            photons. <a href="https://doi.org/10.31223/X5B23B">v2 paper</a> · <a href="/map">both versions on the map</a></p>
+        <div class="stat"><b>{{v2_rmse}}<small>m</small></b><span>RMSE on {{v2_n_photons_m}} million held-out ICESat-2 ground photons</span></div>
+        <div class="stat"><b>{{v2_gain_v1}}<small>%</small></b><span>lower error than NepalDTM v1 ({{v1_rmse}} m)</span></div>
+        <div class="stat"><b>{{v2_gain_cop}}<small>%</small></b><span>lower error than Copernicus GLO-30 ({{v2_cop_rmse}} m)</span></div>
+        <div class="stat"><b>{{v2_km2}}<small>km²</small></b><span>covered in {{tiles}} tiles of 24 × 24 km</span></div>
+        <p class="stats-note">NepalDTM v2 (November 2026), all models scored on the same photons, from tracks never used to build it.
+            <a href="https://doi.org/10.31223/X5B23B">v2 paper</a> · <a href="#new">what changed from v1</a> · <a href="/map">both versions on the map</a></p>
     </div>
 </section>
 
@@ -98,27 +98,62 @@
     </div>
 </section>
 
+<section class="block" id="new">
+    <div class="wrap">
+        <p class="kicker">What's new in v2</p>
+        <h2 class="title">A better input surface, not a bigger model</h2>
+        <p class="intro">Thirty-one recorded experiments on v1 showed that its error came from the stereo mosaic it started from:
+            adding predictors to the ground model moved the national error by at most 2%. The stereo strips agree with each other
+            to within a metre where they overlap, yet the mosaic built from them was offset by 1.5–2.3 m. So v2 rebuilds the input.</p>
+        <div class="steps">
+            <div class="step">
+                <h3>Adjust every strip to the laser</h3>
+                <p>Each of the {{v2_n_strips}} NASA High Mountain Asia stereo strips gets its own tilted correction plane, solved together
+                    against ICESat-2 ground photons and against the strips it overlaps.</p>
+                <ul><li>{{v2_n_photon_ties_m}} M photon ties</li><li>{{v2_n_overlap_ties_m}} M strip-to-strip ties</li><li>robust least squares</li></ul>
+            </div>
+            <div class="step">
+                <h3>Keep stereo at cliffs</h3>
+                <p>v1 threw away stereo cells that disagreed with Copernicus, including at cliffs where Copernicus itself is wrong.
+                    v2 keeps them wherever two adjusted strips agree.</p>
+                <ul><li>HMA stereo · {{v2_share_hma}}% of area (v1 {{share_hma}}%)</li><li>Copernicus fill · {{v2_share_fill}}%</li></ul>
+            </div>
+            <div class="step">
+                <h3>Retrain and test on new photons</h3>
+                <p>The ground model is retrained on the new surface. Every model is scored on the same ICESat-2 photons, from whole
+                    tracks never used in the adjustment or training.</p>
+                <ul><li>{{v2_n_photons_m}} M held-out photons</li><li>Langtang 2 m stereo check</li><li>Khumbu differential GPS</li></ul>
+            </div>
+        </div>
+        <div class="limits" style="margin-top:40px">
+            <div class="limit"><b>{{v1_rmse}} → {{v2_rmse}} m</b><p>National RMSE on the held-out photons, v1 to v2 (NMAD {{v2_nmad}} m).</p></div>
+            <div class="limit"><b>{{v1_rmse_steep}} → {{v2_rmse_steep}} m</b><p>RMSE on slopes of 40° and steeper, where the gain is largest.</p></div>
+            <div class="limit"><b>{{v1_lt_dem}} → {{v2_lt_dem}} m</b><p>Surface error against an independent 2 m stereo model at Langtang (Copernicus {{lt_cop}} m).</p></div>
+        </div>
+    </div>
+</section>
+
 <section class="block" id="method">
     <div class="wrap">
         <p class="kicker">How it is built</p>
-        <h2 class="title">Three satellite sources, one correction model</h2>
-        <p class="intro">The sharpest available surface is stitched together, then a model trained on laser ground returns predicts how much
-            vegetation and buildings add to it, and subtracts that.</p>
+        <h2 class="title">Adjusted stereo, laser ground truth, one correction model</h2>
+        <p class="intro">The sharpest available surface is rebuilt from adjusted stereo strips, then a model trained on laser ground returns
+            predicts how much vegetation and buildings add to it, and subtracts that.</p>
         <div class="steps">
             <div class="step">
-                <h3>Stitch the best surface</h3>
-                <p>The NASA High Mountain Asia 8 m stereo mosaic is used wherever it exists. Copernicus GLO-30 fills the gaps.</p>
-                <ul><li>HMA DEM 8 m · {{share_hma}}% of area</li><li>Copernicus GLO-30 · {{share_fill}}%</li></ul>
+                <h3>Build the best surface</h3>
+                <p>The adjusted NASA High Mountain Asia 8 m stereo strips are stacked wherever they exist. Copernicus GLO-30 fills the gaps.</p>
+                <ul><li>HMA stereo 8 m · {{v2_share_hma}}% of area</li><li>Copernicus GLO-30 · {{v2_share_fill}}%</li></ul>
             </div>
             <div class="step">
                 <h3>Learn where the ground is</h3>
                 <p>Laser altimeters on ICESat-2 and GEDI see through gaps in the canopy to the ground. A model learns the canopy and building offset from them.</p>
-                <ul><li>{{n_icesat2}} ICESat-2 points</li><li>{{n_gedi}} GEDI points</li><li>canopy height · land cover</li></ul>
+                <ul><li>{{n_icesat2}} ICESat-2 points</li><li>{{n_gedi}} GEDI points</li><li>canopy height · land cover · strip agreement</li></ul>
             </div>
             <div class="step">
                 <h3>Remove it and test honestly</h3>
-                <p>The offset is subtracted from the surface. Whole 48 km blocks were left out of training and used only for scoring.</p>
-                <ul><li>{{n_heldout}} held-out points</li><li>Khumbu differential GPS</li><li>Survey Department contours</li></ul>
+                <p>The offset is subtracted from the surface. Whole ICESat-2 tracks were held out from everything and used only for scoring.</p>
+                <ul><li>{{v2_n_photons_m}} M held-out photons</li><li>Khumbu differential GPS</li><li>Langtang 2 m stereo model</li></ul>
             </div>
         </div>
     </div>
@@ -127,17 +162,23 @@
 <section class="block" id="accuracy">
     <div class="wrap">
         <p class="kicker">Accuracy</p>
-        <h2 class="title">Lower error than Copernicus in every zone</h2>
-        <p class="intro">RMSE against ICESat-2 ground points from 48 km blocks that the model never saw. Lower is better.
-            The gain is largest in the Terai, where flood modelling needs it most.</p>
-        <div class="chart-legend"><span><i style="background:var(--blue)"></i>NepalDTM</span><span><i style="background:var(--band);box-shadow:inset 0 0 0 1px var(--line)"></i>Copernicus GLO-30</span></div>
-        {{accuracy_bars}}
+        <h2 class="title">Better than v1 and Copernicus in every class</h2>
+        <p class="intro">RMSE against ICESat-2 ground photons from tracks never used to build v2, every model on the same photons. Lower is better.
+            v2 is the most accurate of the five models tested in every land-cover, slope and elevation class.</p>
+        <div class="chart-legend"><span><i style="background:var(--blue)"></i>NepalDTM v2</span><span><i style="background:var(--blue-4);opacity:.45"></i>NepalDTM v1</span><span><i style="background:var(--band);box-shadow:inset 0 0 0 1px var(--line)"></i>Copernicus GLO-30</span></div>
+        {{accuracy_bars_v2}}
         <details class="full">
             <summary>Full comparison with FABDEM and GEDTM30</summary>
+            {{accuracy_table_v2}}
+            <p class="note">RMSE in metres on {{v2_n_photons_m}} million held-out ICESat-2 ATL03 ground photons; best per row in bold.
+                Nationally: v2 {{v2_rmse}} m, v1 {{v1_rmse}} m, FABDEM {{v2_fab_rmse}} m, Copernicus {{v2_cop_rmse}} m, GEDTM30 {{v2_gedtm_rmse}} m.
+                Independent check: Khumbu differential GPS agrees with the v2 surface model to {{v2_dgps}} m RMSE at glacier margins ({{n_dgps}} points).</p>
+        </details>
+        <details class="full">
+            <summary>v1 accuracy (October 2026)</summary>
             {{accuracy_table}}
-            <p class="note">RMSE in metres on the {{n_common}} held-out points shared by all models (the national row is the {{n_heldout}} points inside Nepal).
-                GEDTM30 was trained on ICESat-2, so its score here is optimistic. Independent check: Khumbu differential GPS agrees with the surface model
-                to {{dgps}} m RMSE at glacier margins ({{n_dgps}} points).</p>
+            <p class="note">v1 protocol: RMSE in metres on the {{n_common}} held-out ICESat-2 and GEDI points shared by all models, 48 km spatial blocks
+                (the national row is the {{n_heldout}} points inside Nepal). Not directly comparable with the v2 table above, which uses different points.</p>
         </details>
     </div>
 </section>
@@ -146,17 +187,17 @@
     <div class="wrap">
         <p class="kicker">Know the limits</p>
         <h2 class="title">8 m grid, not 8 m detail everywhere</h2>
-        <p class="intro">The file spacing is 8 m across the whole country, but where the stereo mosaic has gaps the terrain detail comes from 30 m data.
+        <p class="intro">The file spacing is 8 m across the whole country, but where the stereo strips have gaps the terrain detail comes from 30 m data.
             The aux file in every tile says which source each pixel came from.</p>
         <div class="limits">
-            <div class="limit"><b>{{rmse_hma}} m</b><p>RMSE where the 8 m stereo mosaic is the base, against {{rmse_fill}} m in Copernicus-filled areas.</p></div>
-            <div class="limit"><b>{{rmse_steep}} m</b><p>RMSE on slopes of 40° and steeper, where every model struggles.</p></div>
-            <div class="limit"><b>{{err_p50}} / {{err_p90}} m</b><p>Median and 90th-percentile expected error across the country, from the per-pixel error band.</p></div>
+            <div class="limit"><b>{{v2_rmse_hma}} m</b><p>RMSE where adjusted HMA stereo is the base, against {{v2_rmse_fill}} m in Copernicus-filled areas ({{v2_n_atl08}} held-out ICESat-2 and GEDI points).</p></div>
+            <div class="limit"><b>{{v2_rmse_steep}} m</b><p>RMSE on slopes of 40° and steeper, still the hardest class: no open data sees the ground under steep, closed forest.</p></div>
+            <div class="limit"><b>{{v2_err_p50}} / {{v2_err_p90}} m</b><p>Median and 90th-percentile expected error across the country, from the per-pixel error band.</p></div>
         </div>
         <div class="coverage" aria-label="Share of area by source">
             <div class="coverage-bar">
-                <div class="hma" style="width:{{share_hma}}%">HMA 8 m · {{share_hma}}%</div>
-                <div class="fill" style="width:{{share_fill}}%">Copernicus 30 m fill · {{share_fill}}%</div>
+                <div class="hma" style="width:{{v2_share_hma}}%">HMA 8 m · {{v2_share_hma}}%</div>
+                <div class="fill" style="width:{{v2_share_fill}}%">Copernicus 30 m fill · {{v2_share_fill}}%</div>
             </div>
         </div>
     </div>
@@ -171,7 +212,7 @@
             <div class="product">
                 <h3>Cloud Optimized GeoTIFF tiles</h3>
                 <p>{{tiles}} tiles of 24 × 24 km, each as <code>_dtm</code> (bare earth), <code>_dem</code> (surface) and <code>_aux</code>
-                    (band 1 source: 1 = HMA 8 m, 2 = Copernicus fill; band 2 expected error in decimetres).</p>
+                    (band 1 source: 1 = HMA 8 m stereo, 2 = Copernicus fill; band 2 expected error in decimetres). v1 and v2 use the same tile names and grid.</p>
                 <a class="btn line go" href="/map">Pick on map</a>
             </div>
             <div class="product">
@@ -181,7 +222,7 @@
             </div>
         </div>
         <pre><button class="copy" data-copy>Copy</button><code># Stream one tile with GDAL, no download needed (mirror for quick access)
-gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif
+gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/v2/out_v2/E0360N3072_dtm.tif
 
 # Or download every tile (zipped by layer) from Zenodo
 # https://doi.org/10.5281/zenodo.24327134</code></pre>
@@ -252,7 +293,8 @@ gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/cog/E0360N3072_dtm.tif
                 <li>Copernicus DEM: ESA, doi:10.5270/ESA-c5d3d65</li>
                 <li>ICESat-2 ATL08: Neuenschwander &amp; Pitts (2019)</li>
                 <li>GEDI L2A: Dubayah et al. (2020)</li>
-                <li>HMA DEM 8 m: Shean (2017), NSIDC</li>
+                <li>HMA DEM 8 m mosaic and stereo strips: Shean (2017), NSIDC</li>
+                <li>ICESat-2 ATL03 photons: Neumann et al. (2019), via SlideRule</li>
                 <li>Canopy height: Tolan et al. (2024)</li>
                 <li>ESA WorldCover 2021: Zanaga et al. (2022)</li>
                 <li>EGM2008: Pavlis et al. (2012)</li>
