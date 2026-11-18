@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use NepalDTM v2, please cite the v2 paper. The EarthArXiv DOI will be added when it is assigned."
+message: "If you use NepalDTM v2, please cite the v2 paper (EarthArXiv, doi:10.31223/X5B23B)."
 title: "NepalDTM v2: Improving on NepalDTM v1 with ICESat-2-Adjusted Stereo Strips for a National 8 m Terrain Model of Nepal"
 version: "2.0"
 date-released: 2026-11-17
@@ -31,8 +31,10 @@ preferred-citation:
     - family-names: Paudel
       given-names: Achyut
   year: 2026
-  url: "https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf"
-  notes: "EarthArXiv preprint; DOI pending."
+  doi: "10.31223/X5B23B"
+  url: "https://doi.org/10.31223/X5B23B"
+  journal: "EarthArXiv"
+  notes: "Preprint, published 2026-11-18."
 references:
   - type: article
     title: "NepalDTM: A National 8-Metre Bare-Earth Digital Terrain Model of Nepal from Multi-Source Satellite Data Fusion"
