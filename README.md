@@ -88,12 +88,12 @@ A national run downloads tens of gigabytes. Cells and tiles already on disk are 
 
 If you use v2, please cite the v2 paper. It is being submitted to EarthArXiv; the DOI will be added here when it is assigned.
 
-Paudel, A. (2026). NepalDTM v2: Photon-controlled joint adjustment of stereo strips for a national terrain model of Nepal. EarthArXiv preprint. https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf
+Paudel, A. (2026). NepalDTM v2: Improving on NepalDTM v1 with ICESat-2-adjusted stereo strips for a national 8 m terrain model of Nepal. EarthArXiv preprint. https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf
 
 ```bibtex
 @misc{paudel2026nepaldtmv2,
   author       = {Paudel, Achyut},
-  title        = {{NepalDTM} v2: Photon-Controlled Joint Adjustment of Stereo Strips for a National Terrain Model of {Nepal}},
+  title        = {{NepalDTM} v2: Improving on {NepalDTM} v1 with {ICESat-2}-Adjusted Stereo Strips for a National 8~m Terrain Model of {Nepal}},
   year         = {2026},
   howpublished = {EarthArXiv preprint (DOI pending)},
   url          = {https://nepaldtm.achyutpdl.com/paper/paper_v2.pdf},
