@@ -148,20 +148,16 @@ USGS 3DEP 1~m & Great Smoky Mountains (forested mid-hills) & 11{,}396 \\
 
 \section{The AI model}
 \label{sec:model}
-G is a conditional denoising diffusion model~\citep{ho2020ddpm} (Figure~\ref{fig:pipeline}, Table~\ref{tab:hyper}). Its
-input is an 8~m window of $32\times32$ cells. Its target is the 1~m residual $r = z_{1\,\mathrm{m}} -
-\mathrm{bic}(x_{8\,\mathrm{m}})$, the part of the terrain that bicubic upsampling misses, so the network learns only
-detail and never the absolute height. The denoiser is a U-Net~\citep{ronneberger2015unet} with 14~M parameters and four
-resolution levels, conditioned on the bicubic upsampling and its two gradients. Diffusion uses 1{,}000 steps with a
-cosine noise schedule~\citep{nichol2021improved} and $v$-prediction~\citep{salimans2022progressive}.
-
-Training draws a clean patch, degrades it with the error model of M on the fly (so each patch gives a new input every
-epoch), rotates or flips it, and minimises the $v$-prediction loss with AdamW~\citep{loshchilov2019adamw}. An exponential
-moving average of the weights is kept for inference. Training ran for 150{,}000 steps of 12 patches on one laptop, a MacBook Pro with an Apple M4 Max (32-core GPU, 36~GB
-of unified memory), using PyTorch~2.15 with its Metal (MPS) backend and no cloud or cluster compute, at
-about 1.3~s per step (roughly 55--80 hours of compute). The same machine ran all inference in this paper
-(Section~\ref{sec:cost}). The loss falls quickly over the first 2{,}000 steps and slowly thereafter
-(Figure~\ref{fig:loss}); held-out scores (Section~\ref{sec:heldout}) were taken at the marked checkpoints.
+G is a conditional denoising diffusion model~\citep{ho2020ddpm} (Figure~\ref{fig:pipeline}, Table~\ref{tab:hyper}). From
+an 8~m window of $32\times32$ cells it predicts the 1~m residual $r = z_{1\,\mathrm{m}} - \mathrm{bic}(x_{8\,\mathrm{m}})$,
+the detail that bicubic upsampling misses, so it never has to learn absolute height. The denoiser is a
+U-Net~\citep{ronneberger2015unet} of 14~M parameters conditioned on the bicubic upsampling and its gradients, with a cosine
+noise schedule~\citep{nichol2021improved} and $v$-prediction~\citep{salimans2022progressive}. Each training patch is
+degraded afresh with the error model of M, rotated or flipped, and the loss minimised with
+AdamW~\citep{loshchilov2019adamw}; an exponential moving average of the weights is used for inference. Training ran for
+150{,}000 steps on one laptop, a MacBook Pro with an Apple M4 Max (32-core GPU, 36~GB unified memory) using PyTorch~2.15
+with its Metal (MPS) backend, at about 1.3~s per step (55--80 hours); the same machine ran all inference. The loss falls
+quickly over the first 2{,}000 steps and slowly thereafter (Figure~\ref{fig:loss}).
 \fig[0.3]{fig10_pipeline}{G in training (top) and inference (bottom).}{fig:pipeline}
 \begin{table}[!htbp]
 \centering\small
@@ -184,64 +180,51 @@ Hardware & one laptop GPU (Apple M4 Max, 36~GB), PyTorch MPS backend \\
 \bottomrule
 \end{tabular}
 \end{table}
-\fig[0.3]{fig01_training_loss}{Training loss, as logged (light) and smoothed (dark). Dotted lines mark the checkpoints evaluated on
-held-out patches. The run was paused and resumed at 24{,}000 steps.}{fig:loss}
+\fig[0.3]{fig01_training_loss}{Training loss, as logged (light) and smoothed (dark). Dotted lines mark the checkpoints
+evaluated on held-out patches. The run was paused and resumed at 24{,}000 steps.}{fig:loss}
 
 \section{Inference}
 \label{sec:inference}
 \subsection{Sampling and the ensemble median}
-Inference uses deterministic DDIM sampling~\citep{song2021ddim}. Each call turns a noise field into one plausible 1~m
-surface consistent with the 8~m input; the samples differ in detail that the input does not determine. We draw $K$
-samples per window and keep their per-pixel median, which keeps the structure the samples agree on and suppresses the
-rest. A single sample is no more accurate than bicubic; the median of four is (Section~\ref{sec:heldout}).
+DDIM sampling~\citep{song2021ddim} turns a noise field into one plausible 1~m surface; samples differ only in detail the
+8~m input does not fix. We keep the per-pixel median of $K$ samples, which retains what they agree on. One sample is no
+more accurate than bicubic; the median of four is (Section~\ref{sec:heldout}).
 
 \subsection{Mass-preserving projection}
 \label{sec:projection}
-The output is constrained so that each $8\times8$~m block averages to the M cell it came from. The obvious form
-subtracts each block's mean and adds the M value back; it is exact but shifts each block by its own constant and leaves
-a step at every 8~m cell edge, visible as a faint grid (second-difference roughness at the cell edge 2.0 times the
-median of the other columns; Figure~\ref{fig:seams}). We use a smooth form instead: the block-mean error is upsampled
-bicubically and added, and this is repeated eight times, each pass cutting the error by about a factor of three.
-
-The projection is applied to every sample, but neither the median of samples nor the blending of overlapping windows
-preserves block means: in the first test runs, which stopped there, the block means of G departed from M by 0.17--0.25~m
-RMSE (up to 2~m). The same eight passes are therefore applied once more to each blended tile. On the Churia box this
-brings every block mean within 1.5~mm of M (RMSE 0.2~mm), takes under a second, and leaves no grid (roughness ratio
-within 0.5\% of 1 at every column). Averaged back to 8~m, G therefore returns M, and cannot change M's accuracy at 8~m.
+Each $8\times8$~m block of G must average to its M cell. Shifting each block by its own constant does this exactly but
+leaves a step at every cell edge, a faint grid with twice the normal roughness there (Figure~\ref{fig:seams}). Instead the
+block-mean error is upsampled bicubically and added, eight times, each pass cutting it about threefold. This is done for
+every sample and again for each blended tile, because the median and the window blending undo it: without the final pass
+block means were off by 0.17--0.25~m RMSE (up to 2~m); with it they are within 1.5~mm of M, with no grid and under a
+second of extra time. G averaged to 8~m therefore returns M and cannot change its accuracy.
 \fig[0.27]{fig05_seam_diagnostic}{Roughness (mean absolute second difference along rows) by column position within the
 8~m cell, relative to its median. The block-constant projection (Chitwan) peaks at the cell edges; the smooth projection
 (Churia) is flat. Bicubic (dotted) has its own smooth periodicity from the interpolation kernel.}{fig:seams}
 
 \subsection{From windows to a province}
-An area is cut into 256~m windows every 192~m on one lattice of the national 8~m grid, and overlaps are blended with a
-raised-cosine weight. Voids in M are filled from their nearest valid cell before generation and masked in the output.
-For a province the area is processed in tiles of 10~km. Each tile computes every window that touches it, plus a margin,
-and is cropped and masked to the province boundary. Each window's starting noise is seeded by its lattice position, and
-DDIM sampling is deterministic, so a window shared by two tiles gives the same surface in both and tile edges join
-without seams. Tiles are written as they finish, so a run can stop and resume.
+Windows of 256~m sit every 192~m on one lattice of the national 8~m grid and are blended with a raised-cosine weight; voids
+in M are filled from the nearest valid cell and masked in the output. A province is processed in resumable 10~km tiles,
+each computing every window that touches it and cropped to the province. Each window's noise is seeded by its lattice
+position and DDIM is deterministic, so a window shared by two tiles is identical in both and tiles join without seams.
 
 \subsection{Cost and cheaper sampling}
 \label{sec:cost}
-Run time is set by the number of network evaluations, steps $\times$ samples. Training and all inference in this paper
-ran on one laptop, a MacBook Pro with an Apple M4 Max (32-core GPU, 36~GB of unified memory), using PyTorch~2.15 with
-its Metal (MPS) backend; no cloud or cluster compute was used. Training took about 1.3~s per step, so 150{,}000 steps
-need roughly 55--80 hours of compute. With 50 steps and four samples a window takes 4.6~s on this GPU; at 26.5 windows
-per km$^2$ that is about 29 days for Bagmati Province (20{,}300~km$^2$). Times on a data-centre GPU would be shorter, but
-the ratios between settings below should hold, since they depend only on the number of network evaluations.
-Table~\ref{tab:speed} and Figure~\ref{fig:speed} score cheaper settings on 256 held-out patches against a tolerance fixed
-before the test (0.01~m RMSE and 0.005 in slope correlation, relative to 50 steps with four samples).
+Run time scales with network evaluations, steps $\times$ samples. With 50 steps and four samples a window takes 4.6~s on
+the laptop above, about 29 days for Bagmati Province (20{,}300~km$^2$, 26.5 windows per km$^2$); faster GPUs shorten this
+but not the ratios between settings. Table~\ref{tab:speed} and Figure~\ref{fig:speed} score cheaper settings on 256
+held-out patches against a tolerance fixed in advance (0.01~m RMSE, 0.005 slope correlation):
 \begin{itemize}\setlength\itemsep{1pt}
-\item 20 steps with four samples scores slightly better than 50 steps and runs 2.5 times faster: fewer steps cost nothing.
-\item 10 steps with two samples runs 10 times faster for a small loss (2.3\% better than bicubic instead of 2.8\%, slope
-correlation 0.692 instead of 0.696), within the tolerance.
-\item Half-precision arithmetic gave the same scores and no speed-up.
-\item Scores move by 0.01--0.02~m between settings of similar cost because sampling is random; that 20 steps with two
-samples scores below 10 steps with two is almost certainly such noise. The advantage of 20 steps with four samples over 10
-with two is small but consistent in both RMSE and slope.
+\item 20 steps $\times$ 4 samples is slightly better than 50 steps and 2.5 times faster: fewer steps cost nothing.
+\item 10 steps $\times$ 2 samples is 10 times faster for a small loss (gain over bicubic 2.3\% instead of 2.8\%, slope
+correlation 0.692 instead of 0.696), within tolerance.
+\item Half precision gave the same scores and no speed-up.
+\item Sampling noise moves scores by 0.01--0.02~m, which explains $20\times2$ scoring below $10\times2$; the small edge of
+$20\times4$ over $10\times2$ is consistent in both measures.
 \end{itemize}
-The choice is between the best surface (20 steps, four samples; about 12 days for Bagmati) and nearly the same surface at
-a quarter of the cost (10 steps, two samples; about 3 days). Stored with LERC compression~\citep{esri_lerc} at a maximum
-error of 1~cm, as for M, the 1~m surface takes 1.1~MB per km$^2$: about 22~GB for Bagmati and 160~GB for Nepal.
+Bagmati thus takes about 12 days for the best surface ($20\times4$) or 3 days for nearly the same one ($10\times2$). With
+LERC compression~\citep{esri_lerc} at 1~cm maximum error, as for M, the 1~m surface takes 1.1~MB per km$^2$: about 22~GB
+for Bagmati and 160~GB for Nepal.
 \begin{table}[!htbp]
 \centering\small
 \caption{Sampling settings on 256 held-out patches (checkpoint 110{,}000). Gain is the RMSE reduction against bicubic
@@ -390,26 +373,18 @@ Chamoli~\citep{bhushan2021chamoli}.
 \section{Future work: national lidar from the Survey Department}
 \label{sec:future}
 The Survey Department of Nepal has flown airborne lidar over about 20{,}000~km$^2$ of the western Terai and Chure, from
-Chitwan to Kanchanpur, with a planned 1~m terrain model of 0.25~m accuracy, 0.5~m contours and orthophotos
-\citep{joshi2020lidar}. To our knowledge these data are not openly released, and using them would need an agreement with
-the Department. They would remove the main weakness of this work, that G has never been checked against 1~m truth in
-Nepal, and would improve M as well.
+Chitwan to Kanchanpur, for a 1~m terrain model of 0.25~m accuracy, 0.5~m contours and orthophotos~\citep{joshi2020lidar}.
+To our knowledge the data are not openly released; using them would need an agreement with the Department. They would:
 \begin{itemize}\setlength\itemsep{1pt}
-\item \textbf{A 1~m test in Nepal.} Held-out lidar blocks would score G, bicubic and M at 1~m on Nepali terrain,
-including slope, drainage and sub-grid relief, and turn the go/no-go decision for a national G from a judgement into a
-measurement. The Chitwan test areas of this paper may lie inside the survey area.
-\item \textbf{Training on Nepal.} The survey covers exactly the terrain missing from the training set: the Terai
-floodplain, river terraces and the Churia hills. Fine-tuning G on part of it, with whole areas held out, would narrow the
-domain gap; the error model of M would be refitted there too, since it is now fitted only at Langtang.
-\item \textbf{Correcting M.} A lidar ground surface measures the error of M directly, cell by cell. That calibrates the
-canopy residual under forest (about $+7$~m in the Churia box) and the steps between source areas, and gives a training set
-for a bias correction of M in the forested lowlands, where ICESat-2 ground photons are sparse.
-\item \textbf{Fusion.} Where lidar exists, the national model would carry measured 1~m heights, with M and G only
-outside it and a blend across the boundary. G would then be needed only where the terrain was never flown.
-\item \textbf{Validation of NepalDTM.} The survey would give a bare-earth reference for all NepalDTM releases at a scale
-ICESat-2 cannot, and a check of the photon-based scores reported for v1 and v2.
+\item \textbf{Test G at 1~m in Nepal}, on held-out lidar blocks, turning the go/no-go for a national G into a measurement
+(the Chitwan test areas may lie inside the survey).
+\item \textbf{Train G on Nepali terrain}: floodplain, terraces and Churia hills, which the training set lacks; the error
+model of M, now fitted only at Langtang, would be refitted there too.
+\item \textbf{Correct M}, by measuring its error cell by cell, including the forest canopy residual (about $+7$~m in the
+Churia box), where ICESat-2 ground photons are sparse.
+\item \textbf{Replace G where flown}: measured 1~m heights inside the survey, M and G outside, blended at the boundary.
+\item \textbf{Validate all NepalDTM releases} at a scale ICESat-2 cannot.
 \end{itemize}
-The same approach would apply to any other lidar flown in Nepal, for example for forest inventories in the Terai.
 
 \section{Data and code availability}
 Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/}: \texttt{error\_model.py},
