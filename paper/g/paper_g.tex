@@ -373,13 +373,36 @@ measured 1~m heights are required.
 between source areas; it adds detail to the surface it is given.
 
 \paragraph{Training domain.} The training lidar is alpine and mid-latitude mountain terrain; Nepal's floodplains,
-terraces and the soft rock of the Churia have no counterpart in it. Lidar of terraced or monsoon hill country, or
-fine-tuning on Nepal by learning to restore M degraded from 8 to 64~m, would narrow the gap.
+terraces and the soft rock of the Churia have no counterpart in it (Section~\ref{sec:future}).
 
 \paragraph{Release.} G is first released for Bagmati Province with the setting chosen in Section~\ref{sec:cost}, shown on
 the web map at zooms 15--17 as an option separate from the measured models. A national release depends on its cost and
 on a comparison against the 2~m composites at Langtang~\citep{shean2026langtang} and
 Chamoli~\citep{bhushan2021chamoli}.
+
+\section{Future work: national lidar from the Survey Department}
+\label{sec:future}
+The Survey Department of Nepal has flown airborne lidar over about 20{,}000~km$^2$ of the western Terai and Chure, from
+Chitwan to Kanchanpur, with a planned 1~m terrain model of 0.25~m accuracy, 0.5~m contours and orthophotos
+\citep{joshi2020lidar}. To our knowledge these data are not openly released, and using them would need an agreement with
+the Department. They would remove the main weakness of this work, that G has never been checked against 1~m truth in
+Nepal, and would improve M as well.
+\begin{itemize}\setlength\itemsep{1pt}
+\item \textbf{A 1~m test in Nepal.} Held-out lidar blocks would score G, bicubic and M at 1~m on Nepali terrain,
+including slope, drainage and sub-grid relief, and turn the go/no-go decision for a national G from a judgement into a
+measurement. The Chitwan test areas of this paper may lie inside the survey area.
+\item \textbf{Training on Nepal.} The survey covers exactly the terrain missing from the training set: the Terai
+floodplain, river terraces and the Churia hills. Fine-tuning G on part of it, with whole areas held out, would narrow the
+domain gap; the error model of M would be refitted there too, since it is now fitted only at Langtang.
+\item \textbf{Correcting M.} A lidar ground surface measures the error of M directly, cell by cell. That calibrates the
+canopy residual under forest (about $+7$~m in the Churia box) and the steps between source areas, and gives a training set
+for a bias correction of M in the forested lowlands, where ICESat-2 ground photons are sparse.
+\item \textbf{Fusion.} Where lidar exists, the national model would carry measured 1~m heights, with M and G only
+outside it and a blend across the boundary. G would then be needed only where the terrain was never flown.
+\item \textbf{Validation of NepalDTM.} The survey would give a bare-earth reference for all NepalDTM releases at a scale
+ICESat-2 cannot, and a check of the photon-based scores reported for v1 and v2.
+\end{itemize}
+The same approach would apply to any other lidar flown in Nepal, for example for forest inventories in the Terai.
 
 \section{Data and code availability}
 Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/}: \texttt{error\_model.py},
