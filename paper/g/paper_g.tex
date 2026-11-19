@@ -157,8 +157,10 @@ cosine noise schedule~\citep{nichol2021improved} and $v$-prediction~\citep{salim
 
 Training draws a clean patch, degrades it with the error model of M on the fly (so each patch gives a new input every
 epoch), rotates or flips it, and minimises the $v$-prediction loss with AdamW~\citep{loshchilov2019adamw}. An exponential
-moving average of the weights is kept for inference. Training ran for 150{,}000 steps of 12 patches on a single laptop GPU (Section~\ref{sec:cost}) at
-about 1.3~s per step. The loss falls quickly over the first 2{,}000 steps and slowly thereafter
+moving average of the weights is kept for inference. Training ran for 150{,}000 steps of 12 patches on one laptop, a MacBook Pro with an Apple M4 Max (32-core GPU, 36~GB
+of unified memory), using PyTorch~2.15 with its Metal (MPS) backend and no cloud or cluster compute, at
+about 1.3~s per step (roughly 55--80 hours of compute). The same machine ran all inference in this paper
+(Section~\ref{sec:cost}). The loss falls quickly over the first 2{,}000 steps and slowly thereafter
 (Figure~\ref{fig:loss}); held-out scores (Section~\ref{sec:heldout}) were taken at the marked checkpoints.
 \fig[0.3]{fig10_pipeline}{G in training (top) and inference (bottom).}{fig:pipeline}
 \begin{table}[!htbp]
