@@ -56,7 +56,7 @@ Himalaya; generative model
 \section{Introduction}
 The measured national terrain model of Nepal, NepalDTM, sits on an 8~m grid~\citep{paudel2026nepaldtm}.
 Its second release (v2, M in this paper) adjusts the NASA High Mountain Asia 8~m stereo
-strips~\citep{shean2020hma} jointly to ICESat-2 ATL03 ground photons~\citep{neumann2019atl03,markus2017icesat2}
+strips~\citep{shean2017hma,shean2020hma} jointly to ICESat-2 ATL03 ground photons~\citep{neumann2019atl03,markus2017icesat2}
 and reaches 5.26~m RMSE against held-out photons nationally.
 Many uses want finer detail than 8~m: drainage on terraced hillsides, gully heads, river banks, road cuts, and
 visualisation at the zooms people use on web maps.
@@ -154,8 +154,8 @@ the terrain bicubic upsampling misses, scaled by 2~m.
 The denoiser is a U-Net~\citep{ronneberger2015unet} of 14~M parameters with four resolution levels (64--256
 channels), conditioned on the bicubic upsampling and its two gradients, with a cosine noise
 schedule~\citep{nichol2021improved} and $v$-prediction~\citep{salimans2022progressive}.
-Training uses AdamW at a learning rate of $2\times10^{-4}$ with a 2{,}000-step warm-up, batches of 12 patches, and an
-exponential moving average of the weights (decay 0.999), on one Apple M4 Max GPU at about 1.2~s per step.
+Training uses AdamW~\citep{loshchilov2019adamw} at a learning rate of $2\times10^{-4}$ with a 2{,}000-step warm-up, batches of 12 patches, and an
+exponential moving average of the weights (decay 0.999), on a single GPU at about 1.2~s per step.
 Sampling uses 50 DDIM steps~\citep{song2021ddim}. Each call gives one plausible 1~m surface; we take the median of
 four, which keeps the structure the samples agree on.
 Table~\ref{tab:hyper} lists the settings.
@@ -176,7 +176,7 @@ Weights used & exponential moving average, decay 0.999 \\
 Sampling & 50 DDIM steps, median of 4 samples \\
 Projection & smooth block-mean correction, 8 passes \\
 Application & $256$~m windows every 192~m, raised-cosine blending \\
-Hardware & one Apple M4 Max GPU (36~GB), about 1.2~s per training step \\
+Hardware & a single GPU (36~GB), about 1.2~s per training step \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -297,8 +297,9 @@ minus held-out ICESat-2 ground photons along two tracks, over shaded relief of G
 Table~\ref{tab:compare} scores G alongside the public global models and both NepalDTM releases, on the same
 held-out photons in the two Chitwan boxes (only photons where every product has a value).
 Copernicus GLO-30~\citep{esa2021copernicus} and FABDEM~\citep{hawker2022fabdem} are resampled bilinearly to
-the 8~m grid; GEM-15~\citep{gem15} is its 15~m DTM, converted from EGM96 to EGM2008 like the photons.
-GEDTM30 is not included: its host returned truncated byte ranges when we ran this comparison.
+the 8~m grid; GEM-15~\citep{gem15} is its 15~m DTM, converted from EGM96~\citep{lemoine1998egm96} to EGM2008~\citep{pavlis2012egm2008} like the photons.
+GEDTM30~\citep{ho2025gedtm30} is not included: its tiles could not be read reliably from the distribution server
+when this comparison was run.
 
 \begin{table}[!htbp]
 \centering
@@ -345,11 +346,40 @@ fine-tuning on Nepal itself by degrading M from 8 to 64~m and learning to restor
 8~m looks like relief below 64~m.
 
 \paragraph{Cost.} An area needs 26.5 windows per km$^2$ at the 192~m stride. With four samples of 50 steps each, a window
-takes 4.6~s on one M4 Max GPU (Churia box, 754 windows in about 58~minutes), so the floodplain box (112~km$^2$) needs about
-4.3~hours at the rate measured while the machine was awake.
-At that rate Bagmati Province (about 20{,}300~km$^2$) would take about 29~days and the whole country (148{,}400~km$^2$, 3.9~million
+takes 4.6~s on one GPU (Churia box, 754 windows in about 58~minutes), so the floodplain box (112~km$^2$) needs about
+4.3~hours, Bagmati Province (about 20{,}300~km$^2$) about 29~days and the whole country (148{,}400~km$^2$, 3.9~million
 windows) about 5{,}000 GPU-hours.
-Storage is small by comparison. Stored losslessly as float32 the 1~m surface takes 2.9~MB per km$^2$; with LERC compression at
+
+\paragraph{Cheaper sampling.} Table~\ref{tab:speed} scores cheaper settings on 256 held-out patches (checkpoint at
+110{,}000 steps). Run time is set almost entirely by the number of network evaluations, steps $\times$ samples.
+\begin{itemize}
+\item Twenty steps with four samples scores slightly better than the full 50-step setting and runs 2.5 times faster, so
+cutting the steps to 20 costs nothing.
+\item Ten steps with two samples runs about 10 times faster at a small cost: 2.3\% better than bicubic instead of 2.8\%,
+and a slope correlation of 0.692 instead of 0.696. This is within the tolerance set before the test (0.01~m RMSE, 0.005 in
+slope correlation).
+\item Half-precision arithmetic gave the same scores and no speed-up, so it is not used.
+\item Sampling is random, so scores move by 0.01--0.02~m between settings of similar cost. That 20 steps with two samples
+scores below 10 steps with two samples is almost certainly such noise rather than a real effect. The gap between 10 steps
+with two samples and 20 steps with four is therefore small, but the advantage of 20 steps with four samples is consistent
+on both RMSE and slope.
+\end{itemize}
+The choice is a trade between cost and a small, consistent gain: 20 steps with four samples gives the best surface for
+Bagmati in about 12~days, and 10 steps with two samples gives nearly the same surface in about 3~days.
+
+\begin{table}[h]\centering\small
+\caption{Sampling settings on 256 held-out patches. Gain is the RMSE reduction against bicubic interpolation (1.294~m).
+Days for Bagmati are scaled from the measured 4.6~s per window of the full setting.}\label{tab:speed}
+\begin{tabular}{lrrrrr}\toprule
+Steps $\times$ samples & RMSE (m) & Gain & Slope corr. & Speed-up & Bagmati (days)\\\midrule
+$50\times4$ (full) & 1.258 & 2.8\% & 0.696 & 1.0$\times$ & 29\\
+$20\times4$ & 1.251 & 3.3\% & 0.703 & 2.5$\times$ & 12\\
+$20\times2$ & 1.281 & 1.0\% & 0.678 & 4.9$\times$ & 6\\
+$10\times2$ & 1.264 & 2.3\% & 0.692 & 10.4$\times$ & 3\\
+$20\times1$ & 1.281 & 1.0\% & 0.667 & 9.8$\times$ & 3\\\bottomrule
+\end{tabular}
+\end{table}
+Storage is small by comparison. Stored losslessly as float32 the 1~m surface takes 2.9~MB per km$^2$; with LERC compression~\citep{esri_lerc} at
 a maximum error of 1~cm, as used for M, it takes 1.1~MB per km$^2$ (measured on the Churia output), so about 22~GB for Bagmati
 and 160~GB for the country, and the web-map tiles at zooms 15--17 add about 0.65~MB per km$^2$.
 The cost is set by sampling, so the levers are fewer sampling steps, fewer samples per window, half-precision arithmetic, a
@@ -364,12 +394,13 @@ Training continues towards 150{,}000 steps.
 On completion the final checkpoint will be evaluated on the held-out patches together with the cheaper sampling settings
 above, and the fastest setting that matches the full-quality result will be used for a first regional release
 (Bagmati Province), with a seam check of the wider stride.
-A national G remains conditional on that cost and on a go/no-go comparison against the 2~m composites at Langtang and
+A national G remains conditional on that cost and on a go/no-go comparison against the 2~m composites at Langtang~\citep{shean2026langtang} and
 Chamoli~\citep{bhushan2021chamoli}, and would be published as a product distinct from M.
 
 \section{Data and code availability}
 Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/error\_model.py},
-\texttt{code/g/make\_patches.py}, \texttt{code/g/g\_model.py}, \texttt{code/g/g\_apply.py}, \texttt{code/g/g\_tiles.py}).
+\texttt{code/g/make\_patches.py}, \texttt{code/g/g\_model.py}, \texttt{code/g/g\_apply.py}, \texttt{code/g/g\_bench.py}, \texttt{code/g/g\_region.py},
+\texttt{code/g/g\_tiles.py}).
 The measured 8~m model M is NepalDTM v2~\citep{paudel2026nepaldtmv2}: code at \url{https://github.com/achyut/NepalDTM}, branch \texttt{v2}; data at \url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data}.
 The NepalDTM-G test tiles are viewable at \url{https://nepaldtm.achyutpdl.com/map?v=g}.
 

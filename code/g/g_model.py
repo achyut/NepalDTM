@@ -211,10 +211,11 @@ def train(steps: int, bs: int):
 
 
 @torch.no_grad()
-def sample(net, m8: torch.Tensor, n_steps=50, eta=0.0, project=True):
-    """DDIM sampling; returns 1 m heights (B,1,256,256). project: G averages exactly to M at 8 m."""
+def sample(net, m8: torch.Tensor, n_steps=50, eta=0.0, project=True, noise=None):
+    """DDIM sampling; returns 1 m heights (B,1,256,256). project: G averages exactly to M at 8 m.
+    noise: optional starting noise (B,1,256,256), so a window gives the same result wherever it is computed."""
     up, cond, off = condition(m8)
-    x = torch.randn_like(up)
+    x = torch.randn_like(up) if noise is None else noise.to(up)
     ts = torch.linspace(T_STEPS, 1, n_steps + 1, device=m8.device)
     for a, b in zip(ts[:-1], ts[1:]):
         aa, ab_ = alpha_bar(a), alpha_bar(b)
