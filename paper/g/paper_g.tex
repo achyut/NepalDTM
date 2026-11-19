@@ -15,11 +15,12 @@
 \graphicspath{{figures/}}
 \newcommand{\fig}[4][0.42]{\begin{figure}[!htbp]\centering\includegraphics[width=0.95\textwidth,height=#1\textheight,keepaspectratio]{#2.pdf}\caption{#3}\label{#4}\end{figure}}
 \hypersetup{%
-  pdftitle={NepalDTM-G: A National 1-Metre Digital Terrain Model of Nepal from Lidar-Trained Generative Downscaling of NepalDTM v2},
+  pdftitle={NepalDTM-G: A 1 m Digital Elevation Model of Nepal from Diffusion-Based Super-Resolution Trained on Lidar},
+  pdfkeywords={Nepal, DEM, DTM, digital elevation model, 1 m, high resolution, super-resolution, diffusion model, deep learning, lidar, Himalaya},
   pdfauthor={Achyut Paudel}%
 }
 
-\newcommand{\gtitle}{NepalDTM-G: A National 1-Metre Digital Terrain Model\\[2pt] of Nepal from Lidar-Trained Generative\\[2pt] Downscaling of NepalDTM v2}
+\newcommand{\gtitle}{NepalDTM-G: A 1~m Digital Elevation Model of Nepal\\[2pt] from Diffusion-Based Super-Resolution\\[2pt] Trained on Lidar}
 \newcommand{\orcidid}{0000-0002-1459-3631}
 \newcommand{\affil}{Independent Researcher}
 \newcommand{\email}{\href{mailto:achyut.pdl@gmail.com}{achyut.pdl@gmail.com}}
@@ -61,8 +62,8 @@ Comments and feedback are welcome: \email
 \maketitle
 
 \begin{abstract}
-No open data measure the terrain of Nepal at 1~m. The finest national measured model is NepalDTM v2 (M), a bare-earth
-model on an 8~m grid. NepalDTM-G (G) adds 1~m detail to M without changing it at 8~m. G is a conditional denoising
+No open digital elevation model (DEM) of Nepal exists at 1~m. The finest national measured model is NepalDTM v2 (M), a bare-earth
+model on an 8~m grid. NepalDTM-G (G) adds 1~m detail to M without changing it at 8~m. G is a deep-learning super-resolution model, a conditional denoising
 diffusion model trained on 75{,}521 lidar patches from the Swiss Alps and three United States mountain ranges, each
 degraded with an error model fitted to M, so that training inputs look like the real product rather than clean block
 averages. A smooth mass-preserving projection, applied after the samples are combined and the windows blended, makes
@@ -73,7 +74,7 @@ keeps the accuracy of its input against held-out ICESat-2 photons while adding s
 not measured, and it is published as a product separate from M.
 \end{abstract}
 
-\noindent\textbf{Keywords:} digital terrain model; downscaling; denoising diffusion; lidar; Nepal; Himalaya
+\noindent\textbf{Keywords:} Nepal; digital elevation model (DEM); digital terrain model (DTM); 1~m; high resolution; super-resolution; diffusion model; deep learning; lidar; Himalaya
 
 \section{Introduction}
 NepalDTM is an open national terrain model of Nepal on an 8~m grid~\citep{paudel2026nepaldtm}. Its second release (v2,

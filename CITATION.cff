@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use NepalDTM-G, please cite it and the NepalDTM v2 paper."
-title: "NepalDTM-G: A National 1-Metre Digital Terrain Model of Nepal from Lidar-Trained Generative Downscaling of NepalDTM v2"
+title: "NepalDTM-G: A 1 m Digital Elevation Model of Nepal from Diffusion-Based Super-Resolution Trained on Lidar"
 authors:
   - family-names: Paudel
     given-names: Achyut
@@ -10,7 +10,7 @@ repository-code: "https://github.com/achyut/NepalDTM"
 license: MIT
 preferred-citation:
   type: article
-  title: "NepalDTM-G: A National 1-Metre Digital Terrain Model of Nepal from Lidar-Trained Generative Downscaling of NepalDTM v2"
+  title: "NepalDTM-G: A 1 m Digital Elevation Model of Nepal from Diffusion-Based Super-Resolution Trained on Lidar"
   authors:
     - family-names: Paudel
       given-names: Achyut

@@ -105,7 +105,7 @@ NepalDTM-G is work in progress; the paper source is in `paper/g/`. Cite it, and 
 ```bibtex
 @misc{paudel2026nepaldtmg,
   author       = {Paudel, Achyut},
-  title        = {{NepalDTM-G}: A National 1-Metre Digital Terrain Model of {Nepal} from Lidar-Trained Generative Downscaling of {NepalDTM} v2},
+  title        = {{NepalDTM-G}: A 1 m Digital Elevation Model of {Nepal} from Diffusion-Based Super-Resolution Trained on Lidar},
   year         = {2026},
   howpublished = {Preprint in preparation},
   url          = {https://github.com/achyut/NepalDTM/tree/g}
