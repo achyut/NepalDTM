@@ -58,8 +58,12 @@ def fig_loss():
     ev = sorted(int(f.stem.split("_")[1]) for f in CK.glob("eval_*.json") if int(f.stem.split("_")[1]) >= 1000)
     for i, e in enumerate(ev):
         ax.axvline(e / 1000, color="#dc143c", lw=0.6, ls=":", label="held-out evaluation" if i == 0 else None)
-    ax.set_xlabel("training step (thousands)"); ax.set_ylabel("v-prediction loss")
-    ax.set_ylim(0, min(0.3, l.max() * 1.05)); ax.set_xlim(0, s.max() / 1000 * 1.01)
+    ax.set_xscale("log")
+    tk = [0.5, 1, 2, 5, 10, 20, 50, 100, 150]
+    ax.set_xticks(tk, [f"{t:g}" for t in tk]); ax.minorticks_off()
+    ax.set_xlabel("training step (thousands, log scale)"); ax.set_ylabel("v-prediction loss")
+    ax.set_xlim(s.min() / 1000 * 0.9, max(150, s.max() / 1000) * 1.05)
+    ax.set_ylim(0.06, min(0.2, l.max() * 1.05))
     ax.legend(frameon=False, fontsize=7, loc="upper right")
     save(fig, "fig01_training_loss")
 
