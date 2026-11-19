@@ -49,21 +49,21 @@ def fig_loss():
     _, last = np.unique(s[::-1], return_index=True)  # one value per step (restarts re-log a few steps)
     keep = len(s) - 1 - last
     s, l = s[keep], l[keep]
-    fig, ax = plt.subplots(figsize=(6, 2.6))
-    ax.plot(s / 1000, l, lw=0.6, color="#7fa3d6", label="logged every 100 steps")
-    k = 21
-    if len(l) > k:
-        sm = np.convolve(l, np.ones(k) / k, mode="valid")
-        ax.plot(s[k // 2:-(k // 2)] / 1000, sm, lw=1.4, color="#003893", label=f"smoothed ({k} points)")
+    fig, ax = plt.subplots(figsize=(6.5, 2.8))
+    ax.plot(s / 1000, l, lw=0.5, color="#c5d3ea", label="logged every 100 steps", zorder=1)
+    # centred moving average whose window shrinks near the ends, so the smoothed line runs from the first step
+    k = 31
+    cs = np.concatenate([[0], np.cumsum(l)])
+    i = np.arange(len(l)); lo, hi = np.maximum(0, i - k // 2), np.minimum(len(l), i + k // 2 + 1)
+    hw = np.minimum(i - lo, hi - 1 - i); lo, hi = i - hw, i + hw + 1  # symmetric at the ends: no lag
+    sm = (cs[hi] - cs[lo]) / (hi - lo)
+    ax.plot(s / 1000, sm, lw=1.6, color="#003893", label="smoothed", zorder=3)
     ev = sorted(int(f.stem.split("_")[1]) for f in CK.glob("eval_*.json") if int(f.stem.split("_")[1]) >= 1000)
-    for i, e in enumerate(ev):
-        ax.axvline(e / 1000, color="#dc143c", lw=0.6, ls=":", label="held-out evaluation" if i == 0 else None)
-    ax.set_xscale("log")
-    tk = [0.5, 1, 2, 5, 10, 20, 50, 100, 150]
-    ax.set_xticks(tk, [f"{t:g}" for t in tk]); ax.minorticks_off()
-    ax.set_xlabel("training step (thousands, log scale)"); ax.set_ylabel("v-prediction loss")
-    ax.set_xlim(s.min() / 1000 * 0.9, max(150, s.max() / 1000) * 1.05)
-    ax.set_ylim(0.06, min(0.2, l.max() * 1.05))
+    for j, e in enumerate(ev):
+        ax.axvline(e / 1000, color="#dc143c", lw=0.6, ls=":", label="held-out evaluation" if j == 0 else None, zorder=2)
+    ax.set_xlabel("training step (thousands)"); ax.set_ylabel("v-prediction loss")
+    ax.set_xlim(0, max(150, s.max() / 1000)); ax.set_ylim(0, min(0.2, l.max() * 1.05))
+    ax.grid(axis="y", color="#eee", lw=0.6); ax.set_axisbelow(True)
     ax.legend(frameon=False, fontsize=7, loc="upper right")
     save(fig, "fig01_training_loss")
 
