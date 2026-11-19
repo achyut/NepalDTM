@@ -233,6 +233,15 @@ def sample(net, m8: torch.Tensor, n_steps=50, eta=0.0, project=True, noise=None)
     return z
 
 
+def project_area(z: np.ndarray, m8: np.ndarray, iters: int = PROJECT_ITERS) -> np.ndarray:
+    """Final smooth projection of a blended 1 m area onto M (H*8, W*8 vs H, W), on the CPU.
+    Per-sample projection does not survive the ensemble median and window blending; this restores block means = M."""
+    zt, mt = torch.from_numpy(np.ascontiguousarray(z, "float32"))[None, None], torch.from_numpy(m8.astype("float32"))[None, None]
+    for _ in range(iters):
+        zt = zt + F.interpolate(mt - F.avg_pool2d(zt, 8), scale_factor=8, mode="bicubic", align_corners=False)
+    return zt[0, 0].numpy()
+
+
 def evaluate(n: int, ens: int, ckpt: str | None):
     p = Path(ckpt) if ckpt else sorted(CK.glob("ema_*.pt"))[-1]
     net = UNet().to(DEV)

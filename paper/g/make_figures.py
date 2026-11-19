@@ -2,7 +2,7 @@
 """Figures for the G paper (reports/g_v1). Reads the training log, the checkpoint evaluations and the Chitwan/Churia
 apply outputs; writes PDF + PNG into figures/.
 
-Run from the repo root: python paper/g/make_figures.py
+Run from the repo root: .venv/bin/python -I reports/g_v1/make_figures.py
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ import numpy as np  # noqa: E402
 import rasterio  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-CK = ROOT / "code" / "data" / "checkpoints" / "g_model"
-APPLY = ROOT / "code" / "data" / "gen" / "apply"
+CK = ROOT / "experiments" / "checkpoints" / "g_model"
+APPLY = ROOT / "fusion" / "data" / "gen" / "apply"
 OUT = Path(__file__).resolve().parent / "figures"
 plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.right": False, "savefig.dpi": 200})
 
@@ -39,7 +39,7 @@ def hillshade(z, px=1.0, az=315, alt=45):
 
 def fig_loss():
     steps, loss = [], []
-    logs = [ROOT / "code" / "data" / "gen" / "g_train.log", CK / "train.log"]  # steps 0-24k, then from the resume
+    logs = [ROOT / "fusion" / "data" / "gen" / "g_train.log", CK / "train.log"]  # steps 0-24k, then from the resume
     for line in "\n".join(p.read_text() for p in logs if p.exists()).splitlines():
         m = re.match(r"step (\d+)\s+loss ([\d.]+)", line)
         if m:
@@ -50,9 +50,17 @@ def fig_loss():
     keep = len(s) - 1 - last
     s, l = s[keep], l[keep]
     fig, ax = plt.subplots(figsize=(6, 2.6))
-    ax.plot(s / 1000, l, lw=0.8, color="#003893")
-    ax.set_xlabel("training step (thousands)"); ax.set_ylabel("v-prediction loss (running mean)")
-    ax.set_ylim(0, min(0.3, l.max() * 1.05))
+    ax.plot(s / 1000, l, lw=0.6, color="#7fa3d6", label="logged every 100 steps")
+    k = 21
+    if len(l) > k:
+        sm = np.convolve(l, np.ones(k) / k, mode="valid")
+        ax.plot(s[k // 2:-(k // 2)] / 1000, sm, lw=1.4, color="#003893", label=f"smoothed ({k} points)")
+    ev = sorted(int(f.stem.split("_")[1]) for f in CK.glob("eval_*.json") if int(f.stem.split("_")[1]) >= 1000)
+    for i, e in enumerate(ev):
+        ax.axvline(e / 1000, color="#dc143c", lw=0.6, ls=":", label="held-out evaluation" if i == 0 else None)
+    ax.set_xlabel("training step (thousands)"); ax.set_ylabel("v-prediction loss")
+    ax.set_ylim(0, min(0.3, l.max() * 1.05)); ax.set_xlim(0, s.max() / 1000 * 1.01)
+    ax.legend(frameon=False, fontsize=7, loc="upper right")
     save(fig, "fig01_training_loss")
 
 
@@ -69,12 +77,14 @@ def fig_eval():
                      r["bicubic"].get("slope_corr"), r[gm].get("slope_corr")))
     fig, ax = plt.subplots(1, 2, figsize=(7.5, 2.8))
     x = np.arange(len(rows)); w = 0.27
-    lab = [f"{s // 1000}k\n(n={n})" for s, n, *_ in rows]
+    lab = [f"{s // 1000}k\n{n}" for s, n, *_ in rows]
     ax[0].bar(x - w, [r[2] for r in rows], w, label="bicubic", color="#9aa7b8")
     ax[0].bar(x, [r[4] for r in rows], w, label="G, 1 sample", color="#7fa3d6")
     ax[0].bar(x + w, [r[3] for r in rows], w, label="G, median of 4", color="#003893")
-    ax[0].set_xticks(x, lab); ax[0].set_ylabel("RMSE against 1 m lidar (m)"); ax[0].legend(frameon=False, fontsize=7)
-    ax[0].set_ylim(1.0, max(r[2] for r in rows) * 1.08)
+    ax[0].set_xticks(x, lab); ax[0].set_ylabel("RMSE against 1 m lidar (m)")
+    ax[0].set_xlabel("checkpoint (steps) and patches")
+    ax[0].legend(frameon=False, fontsize=7, ncol=3, loc="lower center", bbox_to_anchor=(0.5, 1.0))
+    ax[0].set_ylim(1.0, max(r[2] for r in rows) * 1.05)
     gain = [100 * (1 - r[3] / r[2]) for r in rows]
     ax[1].bar(x - w / 2, gain, w, color="#003893", label="RMSE gain of G over bicubic (%)")
     sc = [(r[5], r[6]) for r in rows]
@@ -82,9 +92,11 @@ def fig_eval():
     ax2.plot(x + w / 2, [b for b, _ in sc], "o", color="#9aa7b8", label="slope-map corr., bicubic")
     ax2.plot(x + w / 2, [g for _, g in sc], "o", color="#dc143c", label="slope-map corr., G")
     ax[1].set_xticks(x, lab); ax[1].set_ylabel("RMSE gain over bicubic (%)"); ax2.set_ylabel("slope-map correlation")
+    ax[1].set_xlabel("checkpoint (steps) and patches")
     ax2.set_ylim(0.5, 0.75); ax2.spines["right"].set_visible(True)
     h1, l1 = ax[1].get_legend_handles_labels(); h2, l2 = ax2.get_legend_handles_labels()
-    ax[1].legend(h1 + h2, l1 + l2, frameon=False, fontsize=7, loc="lower right")
+    ax[1].legend(h1 + h2, ["RMSE gain (%)", "slope corr., bicubic", "slope corr., G"], frameon=False, fontsize=7,
+                 ncol=3, loc="lower center", bbox_to_anchor=(0.5, 1.0))
     fig.tight_layout()
     save(fig, "fig02_heldout_patches")
 
@@ -124,7 +136,9 @@ def fig_seams():
                     label=l2 if l2 else f"bicubic ({name})")
     ax.set_xlabel("column position within the 8 m cell (1 m pixels)")
     ax.set_ylabel("roughness / median")
-    ax.legend(frameon=False, fontsize=7)
+    h, l = ax.get_legend_handles_labels()
+    l = [s.replace("bicubic (chitwan)", "bicubic, Chitwan").replace("bicubic (churia)", "bicubic, Churia") for s in l]
+    ax.legend(h, l, frameon=False, fontsize=7, loc="center left", bbox_to_anchor=(1.0, 0.5))
     save(fig, "fig05_seam_diagnostic")
 
 
@@ -133,7 +147,7 @@ def fig_location():
     import json as _json
     from rasterio.vrt import WarpedVRT
     from rasterio.enums import Resampling as R
-    vrt = ROOT / "code" / "data" / "nw" / "nepal_dtm_8m_v2.vrt"
+    vrt = ROOT / "fusion" / "data" / "nw" / "nepal_dtm_8m_v2.vrt"
     W, H = 1400, 720
     with rasterio.open(vrt) as s, WarpedVRT(s, crs="EPSG:4326", resampling=R.average) as v:
         b = v.bounds
@@ -142,17 +156,27 @@ def fig_location():
     ext = (b.left, b.right, b.bottom, b.top)
     px = (b.right - b.left) / W * 111e3 * np.cos(np.radians(28))
     fig, ax = plt.subplots(figsize=(7.5, 4.0))
-    ax.imshow(np.where(np.isfinite(z), hillshade(np.nan_to_num(z, nan=np.nanmin(z)), px), np.nan), cmap="gray",
-              extent=ext, vmin=0, vmax=1)
     from matplotlib.colors import LinearSegmentedColormap
-    land = LinearSegmentedColormap.from_list("land", plt.cm.terrain(np.linspace(0.25, 1.0, 256)))  # no sea blues
-    ax.imshow(z, cmap=land, alpha=0.5, extent=ext, vmin=0, vmax=7000)
-    nep = _json.loads((Path(__file__).resolve().parent / "nepal.geojson").read_text())
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path as MPath
+    nep = _json.loads((Path.home() / "workspace/NepalDTM/site/data/nepal.geojson").read_text())
+    rings = []
     for f in nep["features"]:
         polys = [f["geometry"]["coordinates"]] if f["geometry"]["type"] == "Polygon" else f["geometry"]["coordinates"]
-        for p in polys:
-            r = np.array(p[0]); ax.plot(r[:, 0], r[:, 1], color="#003893", lw=0.8)
-    lt = next((ROOT / "code" / "data" / "nw" / "zenodo" / "langtang").rglob("*_median_gated_v1.0.tif"))
+        rings += [np.array(p[0]) for p in polys]
+    clip = PathPatch(MPath.make_compound_path(*[MPath(r) for r in rings]), transform=ax.transData, fc="none", ec="none")
+    ax.add_patch(clip)
+    hs_im = ax.imshow(np.where(np.isfinite(z), hillshade(np.nan_to_num(z, nan=np.nanmin(z)), px), np.nan), cmap="gray",
+                      extent=ext, vmin=0, vmax=1)
+    land = LinearSegmentedColormap.from_list("land", plt.cm.terrain(np.linspace(0.25, 1.0, 256)))  # no sea blues
+    el = ax.imshow(z, cmap=land, alpha=0.5, extent=ext, vmin=0, vmax=7000)
+    for im in (hs_im, el):
+        im.set_clip_path(clip)  # Nepal only
+    for r in rings:
+        ax.plot(r[:, 0], r[:, 1], color="#333", lw=0.7)
+    cb = fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(0, 7000), cmap=land), ax=ax, shrink=0.7, pad=0.02)
+    cb.set_label("elevation of NepalDTM v2 (m)")
+    lt = next((ROOT / "fusion" / "data" / "nw" / "zenodo" / "langtang").rglob("*_median_gated_v1.0.tif"))
     from rasterio.warp import transform_bounds
     with rasterio.open(lt) as s:
         lb = transform_bounds(s.crs, "EPSG:4326", *s.bounds)
@@ -160,9 +184,9 @@ def fig_location():
              ("Churia hills", (84.45, 27.46, 84.50, 27.51), "#ff8c00", (8, -12)),
              ("Langtang (error model)", lb, "#003893", (8, 6))]
     for name, (w, s_, e, n), col, off in boxes:
-        ax.add_patch(plt.Rectangle((w, s_), e - w, n - s_, fill=False, ec=col, lw=1.6))
-        ax.annotate(name, (e, n if off[1] > 0 else s_), xytext=off, textcoords="offset points", fontsize=7, color=col,
-                    weight="bold")
+        ax.add_patch(plt.Rectangle((w, s_), e - w, n - s_, fill=False, ec=col, lw=1.8, label=name))
+    ax.legend(frameon=True, framealpha=0.9, fontsize=7, loc="upper right", title="areas used in this paper",
+              title_fontsize=7)
     ax.set_xlim(80, 88.3); ax.set_ylim(26.3, 30.5)
     ax.set_xlabel("longitude (°E)"); ax.set_ylabel("latitude (°N)")
     save(fig, "fig06_location_map")
@@ -170,9 +194,9 @@ def fig_location():
 
 def fig_training_examples():
     """One representative lidar patch per training site, shaded."""
-    meta = np.load(ROOT / "code" / "data" / "gen" / "patches_meta.npz", allow_pickle=True)
+    meta = np.load(ROOT / "fusion" / "data" / "gen" / "patches_meta.npz", allow_pickle=True)
     n = int(meta["n"])
-    mm = np.memmap(ROOT / "code" / "data" / "gen" / "patches_all.int16", "int16", "r", shape=(n, 256, 256))
+    mm = np.memmap(ROOT / "fusion" / "data" / "gen" / "patches_all.int16", "int16", "r", shape=(n, 256, 256))
     sites = [("swiss", "Swiss Alps (swissALTI3D)"), ("san_juans_co", "San Juan Mts (3DEP)"),
              ("cascades_olympics_wa", "Cascades and Olympics (3DEP)"), ("smokies_nc_tn", "Great Smoky Mts (3DEP)")]
     fig, ax = plt.subplots(1, 4, figsize=(7.5, 2.3))
@@ -200,7 +224,7 @@ def fig_detail_maps():
     ext = (T.c, T.c + T.a * gz.shape[1], T.f + T.e * gz.shape[0], T.f)
     hs = hillshade(np.nan_to_num(gz, nan=np.nanmean(gz)))
     hs_ = []
-    for f in sorted((ROOT / "code" / "data" / "nw" / "atl03").glob("*.parquet")):
+    for f in sorted((ROOT / "fusion" / "data" / "nw" / "atl03").glob("*.parquet")):
         p = pd.read_parquet(f, columns=["lon", "lat", "h", "holdout"])
         p = p[p.holdout.astype(bool) & p.lon.between(84.45, 84.50) & p.lat.between(27.46, 27.51)]
         if len(p):
@@ -229,7 +253,7 @@ def fig_detail_maps():
 
 
 def fig_error_model():
-    em = json.loads((ROOT / "code" / "data" / "gen" / "error_model.json").read_text())
+    em = json.loads((ROOT / "fusion" / "data" / "gen" / "error_model.json").read_text())
     bins = list(em["slope_bins"])
     nm = [em["slope_bins"][k]["nmad"] for k in bins]
     vo = [100 * em["slope_bins"][k]["void_p"] for k in bins]
@@ -247,7 +271,78 @@ def fig_error_model():
     save(fig, "fig09_error_model")
 
 
+def fig_pipeline():
+    """Schematic of G: training (top) and inference (bottom)."""
+    from matplotlib.patches import FancyBboxPatch
+    fig, ax = plt.subplots(figsize=(7.5, 3.3))
+    ax.set_xlim(0, 100); ax.set_ylim(0, 44); ax.axis("off")
+
+    def node(x, y, w, t, col):
+        ax.add_patch(FancyBboxPatch((x, y), w, 7, boxstyle="round,pad=0.4,rounding_size=1.2", fc=col, ec="#333", lw=0.6))
+        ax.text(x + w / 2, y + 3.5, t, ha="center", va="center", fontsize=6.6)
+
+    def arrow(x0, y0, x1, y1):
+        ax.annotate("", (x1, y1), (x0, y0), arrowprops=dict(arrowstyle="-|>", lw=0.7, color="#333"))
+
+    tr, inf = "#e8eef8", "#fdeaea"
+    ax.text(0, 41.5, "Training", fontsize=8, weight="bold", color="#003893")
+    row = [(1, "1 m lidar patch\n(Swiss, 3DEP)"), (21, "degrade with\nM's error model"), (41, "8 m input:\nbicubic + gradients"),
+           (61, "U-Net denoiser\n(14 M parameters)"), (81, "v-prediction loss\non 1 m residual")]
+    for x, t in row:
+        node(x, 31, 16, t, tr)
+    for (x, _), (x2, _) in zip(row, row[1:]):
+        arrow(x + 16.8, 34.5, x2 - 0.8, 34.5)
+    ax.text(0, 24, "Inference", fontsize=8, weight="bold", color="#dc143c")
+    row2 = [(1, "NepalDTM v2 (M)\n256 m windows"), (21, "DDIM sampling\nN steps, K samples"), (41, "project each,\nmedian of K"),
+            (61, "blend windows\n(raised cosine)"), (81, "final projection:\nblocks average to M")]
+    for x, t in row2:
+        node(x, 13, 16, t, inf)
+    for (x, _), (x2, _) in zip(row2, row2[1:]):
+        arrow(x + 16.8, 16.5, x2 - 0.8, 16.5)
+    arrow(69, 30.2, 29, 20.6)
+    ax.text(56, 25.6, "trained weights (EMA)", fontsize=6.4, color="#555", ha="left")
+    ax.text(50, 4.5, "Each 256 m window is generated independently with noise seeded by its position, so overlapping "
+            "windows from neighbouring tiles agree;\nthe projection keeps every 8 \u00d7 8 m block equal to M, so G cannot "
+            "change M's accuracy at 8 m.", ha="center", fontsize=6.6, color="#333")
+    save(fig, "fig10_pipeline")
+
+
+def fig_speed():
+    """Sampling cost against quality on held-out patches (newest benchmark)."""
+    f = sorted(CK.glob("bench_*.json"))[-1]
+    b = json.loads(f.read_text())
+    st = [s for s in b["settings"] if not s["fp16"]]
+    bic = b["baselines"]["bicubic"]
+    full = next(s for s in st if s["steps"] == 50 and s["samples"] == 4)
+    fig, ax = plt.subplots(1, 2, figsize=(7.5, 2.9))
+    for k, (key, ylab) in enumerate((("rmse", "RMSE gain over bicubic (%)"), ("slope_corr", "slope-map correlation"))):
+        a = ax[k]
+        val = lambda s: 100 * (1 - s["rmse"] / bic["rmse"]) if key == "rmse" else s[key]
+        ref = val(full)
+        tol = 100 * b["tol_rmse"] / bic["rmse"] if key == "rmse" else b["tol_slope_corr"]
+        a.axhspan(ref - tol, ref + tol, color="#003893", alpha=0.08, lw=0, label="tolerance around 50 \u00d7 4")
+        a.axhline(0 if key == "rmse" else bic[key], color="#9aa7b8", ls="--", lw=0.8, label="bicubic")
+        for s in st:
+            ok = s["ok"]
+            a.plot(s["s_per_window"], val(s), "o" if ok else "x", ms=5, color="#003893" if ok else "#dc143c")
+            a.annotate(f"{s['steps']}\u00d7{s['samples']}", (s["s_per_window"], val(s)), xytext=(4, 3),
+                       textcoords="offset points", fontsize=6.5)
+        a.plot([], [], "o", color="#003893", label="within tolerance")
+        a.plot([], [], "x", color="#dc143c", label="outside tolerance")
+        a.set_xscale("log"); a.set_xlabel("seconds per 256 m window (log scale)"); a.set_ylabel(ylab)
+        a.set_xticks([0.5, 1, 2, 5, 10], ["0.5", "1", "2", "5", "10"]); a.minorticks_off()
+        a.set_xlim(0.4, 12)
+    h, l = ax[0].get_legend_handles_labels()
+    fig.legend(h, l, frameon=False, fontsize=7, ncol=4, loc="upper center", bbox_to_anchor=(0.5, 1.04))
+    fig.text(0.5, -0.03, f"steps \u00d7 samples; {b['n']} held-out patches, checkpoint {b['step']:,} steps",
+             ha="center", fontsize=7, color="#555")
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    save(fig, "fig11_sampling_speed")
+
+
 if __name__ == "__main__":
+    fig_pipeline()
+    fig_speed()
     fig_location()
     fig_training_examples()
     fig_detail_maps()

@@ -28,7 +28,7 @@ from rasterio.windows import from_bounds
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "g"))
 sys.path.insert(0, str(ROOT))
-from g_model import CK, DEV, UNet, condition, sample  # noqa: E402
+from g_model import CK, DEV, UNet, condition, project_area, sample  # noqa: E402
 
 NW = ROOT / "data" / "nw"
 OUT = ROOT / "data" / "gen" / "apply"
@@ -98,7 +98,7 @@ def main():
         if (k // a.bs) % 10 == 0:
             done = k + len(chunk)
             print(f"  {done}/{len(jobs)} windows, {(time.time() - t0) / done * (len(jobs) - done) / 60:.0f} min left", flush=True)
-    g1 = (acc / wsum).astype("float32")
+    g1 = project_area(acc / wsum, m8).astype("float32")  # block means = M after median and blending
     g1[np.kron(bad[:H8, :W8], np.ones((8, 8), bool))] = np.nan
 
     T1 = from_origin(T8.c, T8.f, 1.0, 1.0)

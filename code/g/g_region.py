@@ -27,7 +27,7 @@ from shapely.ops import transform as stransform
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "g"))
 from g_apply import DTM, WIN, feather  # noqa: E402
-from g_model import CK, DEV, UNet, sample  # noqa: E402
+from g_model import CK, DEV, UNet, project_area, sample  # noqa: E402
 
 PROV = ROOT / "data" / "control" / "nepal_provinces.geojson"
 
@@ -100,7 +100,10 @@ def main():
         nwin += len(jobs)
         dr, dc = (rc0 - R) * 8, (cc0 - C) * 8
         with np.errstate(invalid="ignore"):
-            g1 = (acc / wsum)[dr:dr + TILE * 8, dc:dc + TILE * 8]
+            full = acc / wsum
+        cov = wsum > 0  # cells outside every window (void-only windows skipped) stay at M before projection
+        full[~cov] = np.kron(m8, np.ones((8, 8), "float32"))[~cov]
+        g1 = project_area(full, m8)[dr:dr + TILE * 8, dc:dc + TILE * 8]
         g1[np.kron(bad[rc0 - R:rc0 - R + TILE, cc0 - C:cc0 - C + TILE], np.ones((8, 8), bool))] = np.nan
         x0, y0 = src.transform * (cc0, rc0)
         T1 = from_origin(x0, y0, 1.0, 1.0)

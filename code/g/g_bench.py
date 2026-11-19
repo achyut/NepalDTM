@@ -21,7 +21,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from g_model import CK, DEV, Patches, UNet, condition, sample
+from g_model import CK, DEV, Patches, UNet, condition, project_area, sample
 
 SETTINGS = [  # (steps, samples, fp16)
     (50, 4, False), (20, 4, False), (20, 2, False), (10, 2, False), (20, 1, False),
@@ -48,6 +48,8 @@ def score(net, ds, idx, steps, ens, fp16):
         t_gpu += time.time() - t
         S = S.view(len(Z), ens, 256, 256)
         g = S.median(1).values
+        # final projection after the median, as in g_apply / g_region: what is scored is what is shipped
+        g = torch.stack([torch.from_numpy(project_area(g[b].cpu().numpy(), m8[b, 0].cpu().numpy())) for b in range(len(Z))]).to(DEV)
         for b in range(len(Z)):
             e = (S[b, 0] - z[b, 0]).cpu().numpy(); e1.append(e.ravel())
             gz = np.hypot(*np.gradient(z[b, 0].cpu().numpy())); gc = np.hypot(*np.gradient(S[b, 0].cpu().numpy()))
