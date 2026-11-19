@@ -344,20 +344,28 @@ Two remedies follow: adding training areas closer to Nepal (lidar of terraced or
 fine-tuning on Nepal itself by degrading M from 8 to 64~m and learning to restore it, which assumes that relief below
 8~m looks like relief below 64~m.
 
-\paragraph{Cost.} The floodplain box (112~km$^2$) needs about 4.3~hours on one M4 Max GPU at four samples per window,
-at the rate measured while the machine was awake (the actual run took longer because the machine slept).
-At that rate the whole country would take on the order of 5{,}000 GPU-hours; a national G needs fewer samples or
-distillation to fewer sampling steps, or rented accelerators.
+\paragraph{Cost.} An area needs 26.5 windows per km$^2$ at the 192~m stride. With four samples of 50 steps each, a window
+takes 4.6~s on one M4 Max GPU (Churia box, 754 windows in about 58~minutes), so the floodplain box (112~km$^2$) needs about
+4.3~hours at the rate measured while the machine was awake.
+At that rate Bagmati Province (about 20{,}300~km$^2$) would take about 29~days and the whole country (148{,}400~km$^2$, 3.9~million
+windows) about 5{,}000 GPU-hours.
+Storage is small by comparison. Stored losslessly as float32 the 1~m surface takes 2.9~MB per km$^2$; with LERC compression at
+a maximum error of 1~cm, as used for M, it takes 1.1~MB per km$^2$ (measured on the Churia output), so about 22~GB for Bagmati
+and 160~GB for the country, and the web-map tiles at zooms 15--17 add about 0.65~MB per km$^2$.
+The cost is set by sampling, so the levers are fewer sampling steps, fewer samples per window, half-precision arithmetic, a
+wider stride and, beyond those, distillation to a few-step sampler; each must be checked against the held-out patches before
+it is used.
 
 \paragraph{Display.} On the web map, G is shown only for the test boxes and only at zooms 15--17 (about 1~m per
 pixel), as an option separate from the measured models.
 
 \section{Status}
 Training continues towards 150{,}000 steps.
-Next steps are a re-run of the floodplain
-box with the smooth projection, a second Nepal area in the high mountains, and the go/no-go gate against the 2~m
-composites at Langtang and Chamoli~\citep{bhushan2021chamoli}.
-G will be published nationally only if it passes that gate, and then as a product distinct from M.
+On completion the final checkpoint will be evaluated on the held-out patches together with the cheaper sampling settings
+above, and the fastest setting that matches the full-quality result will be used for a first regional release
+(Bagmati Province), with a seam check of the wider stride.
+A national G remains conditional on that cost and on a go/no-go comparison against the 2~m composites at Langtang and
+Chamoli~\citep{bhushan2021chamoli}, and would be published as a product distinct from M.
 
 \section{Data and code availability}
 Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/error\_model.py},

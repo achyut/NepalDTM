@@ -50,7 +50,12 @@ def main():
     ap.add_argument("--ens", type=int, default=4)
     ap.add_argument("--bs", type=int, default=8)
     ap.add_argument("--ckpt")
+    ap.add_argument("--steps", type=int, default=50, help="DDIM steps per sample")
+    ap.add_argument("--stride", type=int, default=24, help="window step in 8 m cells (24 = 192 m, 64 m overlap)")
+    ap.add_argument("--fp16", action="store_true", help="half-precision sampling (MPS/CUDA autocast)")
     a = ap.parse_args()
+    global STRIDE
+    STRIDE = a.stride
     OUT.mkdir(parents=True, exist_ok=True)
     p = Path(a.ckpt) if a.ckpt else sorted(CK.glob("ema_*.pt"))[-1]
     net = UNet().to(DEV)
@@ -76,14 +81,16 @@ def main():
     print(f"{a.name}: {W8 * 8 / 1000:.1f} x {H8 * 8 / 1000:.1f} km, {ny * nx} windows x {a.ens} samples", flush=True)
 
     acc = np.zeros((H8 * 8, W8 * 8), "float32"); wsum = np.zeros_like(acc)
-    fw = feather()
+    fw = feather(ov=(WIN - STRIDE) * 8)
     jobs = [(i, j) for i in range(ny) for j in range(nx)]
     t0 = time.time()
     for k in range(0, len(jobs), a.bs):
         chunk = jobs[k:k + a.bs]
         x = torch.from_numpy(np.stack([m8[i * STRIDE:i * STRIDE + WIN, j * STRIDE:j * STRIDE + WIN] for i, j in chunk]))
         x = x[:, None].to(DEV).repeat_interleave(a.ens, 0)
-        z = sample(net, x).view(len(chunk), a.ens, 256, 256).median(1).values.cpu().numpy()
+        with torch.autocast(DEV.type, dtype=torch.float16, enabled=a.fp16):
+            z = sample(net, x, n_steps=a.steps).float()
+        z = z.view(len(chunk), a.ens, 256, 256).median(1).values.cpu().numpy()
         for (i, j), zz in zip(chunk, z):
             r, c = i * STRIDE * 8, j * STRIDE * 8
             acc[r:r + 256, c:c + 256] += zz * fw
