@@ -67,11 +67,13 @@ model on an 8~m grid. NepalDTM-G (G) adds 1~m detail to M without changing it at
 diffusion model trained on 75{,}521 lidar patches from the Swiss Alps and three United States mountain ranges, each
 degraded with an error model fitted to M, so that training inputs look like the real product rather than clean block
 averages. A smooth mass-preserving projection, applied after the samples are combined and the windows blended, makes
-every $8\times8$~m block of G average to its M cell within 2~mm. On held-out lidar patches the median of four samples is
-about 3\% more accurate than bicubic interpolation and matches the true slope field better (correlation 0.70 against
-0.63); ten sampling steps with two samples keep most of that gain at a tenth of the cost. In two test areas of Chitwan, G
-keeps the accuracy of its input against held-out ICESat-2 photons while adding sub-8~m relief. G's detail is generated,
-not measured, and it is published as a product separate from M.
+every $8\times8$~m block of G average to its M cell within 2~mm. On held-out lidar patches the final model is 3.3\% more
+accurate than bicubic interpolation and matches the true slope field better (correlation 0.70 against 0.63); ten
+sampling steps with two samples give the same result at a tenth of the cost. Against held-out ICESat-2 photons in two
+test areas of Chitwan, G is 1--2\% worse than M. We show that this is a limit of the test, not of G: with the few metres
+of horizontal error of the photons, even the true 1~m surface scores worse than bicubic, so point photons can check G's
+8~m content, which equals M, but not its detail. G's detail is generated, not measured, and it is published as a
+product separate from M.
 \end{abstract}
 
 \noindent\textbf{Keywords:} Nepal; digital elevation model (DEM); digital terrain model (DTM); 1~m; high resolution; super-resolution; diffusion model; deep learning; lidar; Himalaya
@@ -84,9 +86,10 @@ nationally~\citep{paudel2026nepaldtmv2}. Many uses want finer detail: drainage o
 banks, road cuts and web maps at street zooms. No open source measures Nepal at 1~m, so a 1~m product has to be
 generated, with fine structure learned from airborne lidar elsewhere and placed on the measured 8~m surface.
 
-Such a product can be mistaken for measurement, so G obeys two rules. Averaged back to 8~m, G equals M. And G is scored
-like M, against held-out ICESat-2 photons in Nepal, where it must not be worse than M. Within those rules its job is to
-make the relief below 8~m realistic.
+Such a product can be mistaken for measurement, so G obeys two rules. Averaged back to 8~m, G equals M, so it cannot
+change M's measured accuracy. And its 1~m detail is tested against lidar, the only data that measure terrain at that
+scale; ICESat-2 photons, which validate M, are also scored, and Section~\ref{sec:limits} shows what they can and cannot
+tell about detail below 8~m. Within those rules G's job is to make the relief below 8~m realistic.
 
 Learned super-resolution of DEMs is established~\citep[e.g.][]{chen2016demsr}, and diffusion models give the most
 realistic image super-resolution~\citep{saharia2023sr3}. The difficulty here is that the input is a real product with
@@ -211,35 +214,39 @@ position and DDIM is deterministic, so a window shared by two tiles is identical
 
 \subsection{Cost and cheaper sampling}
 \label{sec:cost}
-Run time scales with network evaluations, steps $\times$ samples. With 50 steps and four samples a window takes 4.6~s on
-the laptop above, about 29 days for Bagmati Province (20{,}300~km$^2$, 26.5 windows per km$^2$); faster GPUs shorten this
-but not the ratios between settings. Table~\ref{tab:speed} and Figure~\ref{fig:speed} score cheaper settings on 256
-held-out patches against a tolerance fixed in advance (0.01~m RMSE, 0.005 slope correlation):
+Run time scales with network evaluations, steps $\times$ samples; faster GPUs shorten it but not the ratios between
+settings. Table~\ref{tab:speed} and Figure~\ref{fig:speed} score cheaper settings of the final model on 256 held-out
+patches against a tolerance fixed in advance (0.01~m RMSE, 0.005 slope correlation):
 \begin{itemize}\setlength\itemsep{1pt}
-\item 20 steps $\times$ 4 samples is slightly better than 50 steps and 2.5 times faster: fewer steps cost nothing.
-\item 10 steps $\times$ 2 samples is 10 times faster for a small loss (gain over bicubic 2.3\% instead of 2.8\%, slope
-correlation 0.692 instead of 0.696), within tolerance.
-\item Half precision gave the same scores and no speed-up.
+\item 20 steps $\times$ 4 samples is the best setting (gain over bicubic 3.7\%, slope correlation 0.706) and 2.7 times
+faster than 50 steps: fewer steps cost nothing.
+\item 10 steps $\times$ 2 samples matches 50 steps (3.4\% against 3.3\%; slope correlation 0.697 against 0.700) at 11 times
+less cost.
+\item Half precision gave identical scores; its speed-up varied between runs (none at 110{,}000 steps, 17--28\% at
+150{,}000), so it is not used.
 \item Sampling noise moves scores by 0.01--0.02~m, which explains $20\times2$ scoring below $10\times2$; the small edge of
 $20\times4$ over $10\times2$ is consistent in both measures.
 \end{itemize}
-Bagmati thus takes about 12 days for the best surface ($20\times4$) or 3 days for nearly the same one ($10\times2$). With
+Bagmati Province (20{,}300~km$^2$) is generated with $10\times2$. Its 261 tiles of 10~km hold 0.73~million windows
+including the tile margins, and the run measures 0.53~s per window including reading, blending and writing, about
+4.5 days on the laptop; $20\times4$ would take about 19 days and $50\times4$ about 50. With
 LERC compression~\citep{esri_lerc} at 1~cm maximum error, as for M, the 1~m surface takes 1.1~MB per km$^2$: about 22~GB
 for Bagmati and 160~GB for Nepal.
 \begin{table}[!htbp]
 \centering\small
-\caption{Sampling settings on 256 held-out patches (checkpoint 110{,}000). Gain is the RMSE reduction against bicubic
-(1.294~m). Speed-up is against 50 steps with four samples; days for Bagmati scale its measured 4.6~s per window.}
+\caption{Sampling settings of the final model (150{,}000 steps) on 256 held-out patches. Gain is the RMSE reduction
+against bicubic (1.294~m). Speed-up is against 50 steps with four samples; days for Bagmati scale the measured 0.53~s per
+window of $10\times2$.}
 \label{tab:speed}
 \begin{tabular}{lrrrrr}
 \toprule
 Steps $\times$ samples & RMSE (m) & Gain & Slope corr. & Speed-up & Bagmati (days)\\
 \midrule
-$50\times4$ (reference) & 1.258 & 2.8\% & 0.696 & 1.0$\times$ & 29\\
-$20\times4$ & 1.251 & 3.3\% & 0.703 & 2.5$\times$ & 12\\
-$20\times2$ & 1.281 & 1.0\% & 0.678 & 4.9$\times$ & 6\\
-$10\times2$ & 1.264 & 2.3\% & 0.692 & 10.4$\times$ & 3\\
-$20\times1$ & 1.281 & 1.0\% & 0.667 & 9.8$\times$ & 3\\
+$50\times4$ (reference) & 1.251 & 3.3\% & 0.700 & 1.0$\times$ & 50\\
+$20\times4$ & 1.246 & 3.7\% & 0.706 & 2.7$\times$ & 19\\
+$20\times2$ & 1.261 & 2.6\% & 0.685 & 5.9$\times$ & 9\\
+$10\times2$ (used) & 1.250 & 3.4\% & 0.697 & 11.2$\times$ & 4.5\\
+$20\times1$ & 1.278 & 1.2\% & 0.675 & 11.8$\times$ & 4\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -251,13 +258,15 @@ the tolerance around 50 steps with four samples; the dashed line is bicubic.}{fi
 \label{sec:heldout}
 Held-out patches are degraded with the error model, using a fixed seed per patch, and the 1~m outputs are compared with
 the true lidar (Table~\ref{tab:heldout}, Figure~\ref{fig:heldout}); from 50{,}000 steps the sampling noise is seeded too.
-A single G sample is no better than bicubic, while the median of four is 2.8--2.9\% better from 30{,}000 steps on, with
-little change since. The clearer gain is in shape: the slope map of G correlates with the true slope map at 0.69--0.70,
-against 0.63 for bicubic, so the added relief is partly right, not only plausible.
+A single G sample is no better than bicubic, while the median of four is 2.8--2.9\% better from 30{,}000 to 110{,}000
+steps and 3.3\% better at 150{,}000, the first evaluation with the final projection after the median. The clearer gain is
+in shape: the slope map of G correlates with the true slope map at 0.69--0.70, against 0.63 for bicubic, so the added
+relief is partly right, not only plausible.
 \begin{table}[!htbp]
 \centering\small
 \caption{Held-out lidar patches: RMSE (m) against the true 1~m surface and correlation of slope maps with the true slope
-map. Rows 4{,}000 and 12{,}000 share 64 patches; the later rows share 256.}
+map. Rows 4{,}000 and 12{,}000 share 64 patches; the later rows share 256. From 150{,}000 steps the median is projected
+onto M after it is taken (Section~\ref{sec:projection}).}
 \label{tab:heldout}
 \begin{tabular}{rrrrrrrr}
 \toprule
@@ -271,6 +280,7 @@ Step & Patches & 8~m nearest & Bicubic & G, 1 sample & G, median of 4 & Bicubic 
 50{,}000 & 256 & 1.994 & 1.294 & 1.297 & 1.259 & 0.627 & 0.693 \\
 88{,}000 & 256 & 1.994 & 1.294 & 1.295 & 1.257 & 0.627 & 0.696 \\
 110{,}000 & 256 & 1.994 & 1.294 & 1.297 & 1.258 & 0.627 & 0.696 \\
+150{,}000 & 256 & 1.994 & 1.294 & 1.293 & 1.251 & 0.627 & 0.700 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -280,18 +290,20 @@ right axis).}{fig:heldout}
 
 \subsection{Nepal: Chitwan floodplain and Churia hills}
 \label{sec:nepal}
-G (checkpoint 24{,}000) was applied to two areas of Chitwan District unlike any training terrain: the Rapti floodplain
-near Sauraha (84.40--84.50$^\circ$E, 27.55--27.65$^\circ$N; 155--228~m) and forested ridges of the Churia range
+The final model ($10\times2$) was applied to two areas of Chitwan District unlike any training terrain: the Rapti
+floodplain near Sauraha (84.40--84.50$^\circ$E, 27.55--27.65$^\circ$N; 155--228~m) and forested ridges of the Churia range
 (84.45--84.50$^\circ$E, 27.46--27.51$^\circ$N; about 250--650~m). Both are scored against held-out ICESat-2 photons from
-tracks never used to build M (Table~\ref{tab:nepal}). These runs predate the final projection of
-Section~\ref{sec:projection}; it moves the 8~m means by 0.2~m RMSE, well below the photon errors.
+tracks never used to build M (Table~\ref{tab:nepal}).
 
-In both areas G is within 0.04~m RMSE of its input and adds 7--33\% more sub-grid relief than bicubic. On the floodplain
-it draws channels, banks and terrace edges that bicubic blurs (Figure~\ref{fig:chitwan}); in the hills it sharpens
-ridges and gully heads (Figure~\ref{fig:churia}), and the added relief follows the drainage network rather than appearing
-as uniform texture (Figure~\ref{fig:churiamaps}). The hills box also shows the limit of the approach: M there is
-Copernicus fill under forest, about 7~m above the photons, and G cannot remove an error it is given. A straight
-east--west step in the lower third of the box is in M itself.
+G adds 9--22\% more sub-grid relief than bicubic. On the floodplain it draws channels, banks and terrace edges that
+bicubic blurs (Figure~\ref{fig:chitwan}); in the hills it sharpens ridges and gully heads (Figure~\ref{fig:churia}), and
+the added relief follows the drainage network rather than appearing as uniform texture (Figure~\ref{fig:churiamaps}).
+Against the photons G is 2.0\% worse than M on the floodplain (2.02 against 1.98~m) and 2.0\% worse in the hills (11.87
+against 11.63~m; 95\% interval of the difference 0.05--0.39~m from a block bootstrap along the tracks), while bicubic
+matches M in both. The median error of G equals that of M, so the difference is added scatter, not bias;
+Section~\ref{sec:limits} shows why point photons penalise any 1~m detail. The hills box also shows a limit of the
+approach: M there is Copernicus fill under forest, about 7~m above the photons, and G cannot remove an error it is
+given. A straight east--west step in the lower third of the box is in M itself.
 \begin{table}[!htbp]
 \centering\small
 \caption{Chitwan test areas: error against held-out ICESat-2 ground photons (m), and the standard deviation of the 1~m
@@ -303,37 +315,65 @@ Area & Product & RMSE & NMAD & Median & Sub-grid relief \\
 \midrule
 Floodplain (117{,}703 photons) & M, 8~m & 1.98 & 0.52 & $+0.13$ & -- \\
  & Bicubic, 1~m & 1.97 & 0.51 & $+0.13$ & 0.58 \\
- & G, 1~m & 1.99 & 0.52 & $+0.10$ & 0.77 \\
+ & G, 1~m & 2.02 & 0.53 & $+0.13$ & 0.71 \\
 \midrule
 Churia hills (1{,}610 photons) & M, 8~m & 11.63 & 7.93 & $+7.28$ & -- \\
  & Bicubic, 1~m & 11.65 & 8.44 & $+7.10$ & 1.19 \\
- & G, 1~m & 11.67 & 8.49 & $+6.89$ & 1.27 \\
+ & G, 1~m & 11.87 & 8.51 & $+7.25$ & 1.30 \\
 \bottomrule
 \end{tabular}
 \end{table}
 \fig{fig03_chitwan_floodplain}{Chitwan floodplain: hillshades of M (8~m, shown as blocks), bicubic and G at 1~m, over
-1.5~km (top) and 400~m (bottom, red square). This run used the block-constant projection; the faint 8~m grid is the
-artefact of Section~\ref{sec:projection}.}{fig:chitwan}
-\fig{fig04_churia_hills}{Churia hills, as Figure~\ref{fig:chitwan}, with the smooth projection; 2~km (top) and 400~m
-(bottom) views.}{fig:churia}
+1.5~km (top) and 400~m (bottom, red square); final model, $10\times2$.}{fig:chitwan}
+\fig{fig04_churia_hills}{Churia hills, as Figure~\ref{fig:chitwan}; 2~km (top) and 400~m (bottom) views.}{fig:churia}
 \fig[0.36]{fig08_churia_detail_and_photons}{Churia hills. Left: G minus bicubic, the relief G adds below 8~m. Right: G
 minus held-out ICESat-2 ground photons along two tracks, over shaded relief of G.}{fig:churiamaps}
+
+\subsection{What point photons can and cannot test}
+\label{sec:limits}
+Two tests explain the photon result. First, on 400 held-out lidar patches we placed 200 points per patch, took the true
+height there, and read two surfaces at the point displaced by a random horizontal error: the true 1~m surface itself
+and bicubic of its 8~m means (Table~\ref{tab:limits}). With no displacement the truth is perfect; with 2~m it only ties
+with bicubic, and from 3~m on it scores worse. A sharp surface, even the right one, is punished for small position
+errors that a smooth one absorbs, and ICESat-2 photon positions carry errors of a few metres. Second, in both Nepal
+areas we scaled G's added detail, bicubic $+\,a\,(\mathrm{G}-\mathrm{bicubic})$: photon RMSE rises steadily with $a$, and
+even a quarter of the detail scores worse than none. Photons therefore check G's 8~m content, which equals M by
+construction, but cannot tell right detail from wrong; lidar can (Section~\ref{sec:heldout}), and lidar of Nepal would
+settle it (Section~\ref{sec:future}).
+\begin{table}[!htbp]
+\centering\small
+\caption{Point tests of 1~m detail (RMSE, m). Left: held-out lidar, true 1~m surface and bicubic of its 8~m means, read at
+points displaced by Gaussian horizontal error $\sigma$. Right: held-out photons in Chitwan, bicubic $+\,a\,$(G $-$
+bicubic).}
+\label{tab:limits}
+\begin{tabular}{rrr@{\qquad}rrr}
+\toprule
+$\sigma$ (m) & True 1~m & Bicubic & $a$ & Floodplain & Churia hills \\
+\midrule
+0 & 0.000 & 0.407 & 0 (bicubic) & 1.974 & 11.65 \\
+1 & 0.582 & 0.677 & 0.25 & 1.983 & 11.70 \\
+2 & 1.176 & 1.187 & 0.5 & 1.994 & 11.75 \\
+3 & 1.722 & 1.707 & 0.75 & 2.007 & 11.81 \\
+4 & 2.295 & 2.261 & 1 (G) & 2.023 & 11.87 \\
+6 & 3.336 & 3.295 & M, 8~m & 1.983 & 11.63 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Comparison with other terrain models}
 \label{sec:compare}
 Table~\ref{tab:compare} scores G with the public global models and both NepalDTM releases on the same held-out photons
 (only photons where every product has a value). Copernicus GLO-30~\citep{esa2021copernicus} and
 FABDEM~\citep{hawker2022fabdem} are resampled bilinearly to the 8~m grid; GEM-15~\citep{gem15} is its 15~m DTM, converted
-from EGM96~\citep{lemoine1998egm96} to EGM2008~\citep{pavlis2012egm2008} like the photons. GEDTM30~\citep{ho2025gedtm30}
-is not included because its tiles could not be read reliably from the distribution server when this comparison was run.
-G ranks with M and bicubic, within 0.04~m of both. On the floodplain the three are 8--9\% better than v1 and 59\% better
-than Copernicus, and FABDEM is 0.10~m better still. In the Churia hills v1 is best by about 1~m, because v2 there is
-Copernicus fill with a canopy residual of about $+7$~m. GEM-15 sits 16--31~m above the photons in both boxes. Photon RMSE
-only measures height at the photons; the detail G adds is assessed against lidar in Section~\ref{sec:heldout}.
+from EGM96~\citep{lemoine1998egm96} to EGM2008~\citep{pavlis2012egm2008} like the photons, and
+GEDTM30~\citep{ho2025gedtm30} is resampled like Copernicus. On the floodplain M and bicubic are 8--9\% better than v1 and
+59\% better than Copernicus, FABDEM is 0.10~m better still, and G is 2\% behind M for the reason of
+Section~\ref{sec:limits}. In the Churia hills v1 is best by about 1~m, because v2 there is Copernicus fill with a canopy
+residual of about $+7$~m. GEM-15 sits 16--31~m above the photons in both boxes.
 \begin{table}[!htbp]
 \centering
 \caption{Terrain models on the same held-out ICESat-2 ground photons in the Chitwan test boxes (m; error is model minus
-photon). Best RMSE per area in bold. G is checkpoint 24{,}000.}
+photon). Best RMSE per area in bold. G is the final model, $10\times2$.}
 \label{tab:compare}
 \small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrrrr}
@@ -344,11 +384,12 @@ Model & Grid & RMSE & NMAD & Median & RMSE & NMAD & Median \\
 \midrule
 Copernicus GLO-30 & 30~m & 4.91 & 0.63 & $+0.48$ & 22.37 & 7.53 & $+21.96$ \\
 FABDEM V1-2 & 30~m & \textbf{1.92} & 0.55 & $+0.47$ & 11.89 & 8.13 & $+8.05$ \\
+GEDTM30 & 30~m & 2.00 & 0.62 & $+0.02$ & 12.44 & 7.83 & $+9.09$ \\
 GEM-15 DTM & 15~m & 17.13 & 1.54 & $+15.99$ & 32.05 & 6.90 & $+30.85$ \\
 NepalDTM v1~\citep{paudel2026nepaldtm} & 8~m & 2.20 & 0.45 & $+0.13$ & \textbf{10.64} & 8.99 & $+3.44$ \\
 NepalDTM v2 (M)~\citep{paudel2026nepaldtmv2} & 8~m & 2.02 & 0.44 & $+0.11$ & 11.63 & 7.93 & $+7.28$ \\
 Bicubic of M & 1~m & 2.01 & 0.44 & $+0.11$ & 11.65 & 8.44 & $+7.10$ \\
-G & 1~m & 2.02 & 0.45 & $+0.08$ & 11.67 & 8.49 & $+6.89$ \\
+G & 1~m & 2.06 & 0.46 & $+0.11$ & 11.87 & 8.51 & $+7.25$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -357,8 +398,13 @@ G & 1~m & 2.02 & 0.45 & $+0.08$ & 11.67 & 8.49 & $+6.89$ \\
 \paragraph{What G is.} G is a prior on how terrain looks at 1~m, conditioned on M. Where many 1~m surfaces fit the
 8~m data equally well, it picks a realistic one, and the median of samples keeps the features they agree on. The
 slope-map gain on held-out lidar shows that part of this structure is real, but nothing in Nepal can yet say which 1~m
-features are: ICESat-2 photons are too sparse, and there is no open 1~m lidar of Nepal. G must not be used where
-measured 1~m heights are required.
+features are: ICESat-2 photons cannot judge 1~m detail (Section~\ref{sec:limits}), and there is no open 1~m lidar of
+Nepal. G must not be used where measured 1~m heights are required.
+
+\paragraph{Point accuracy.} Read at a point, G is about 2\% less accurate than M or bicubic in the Chitwan tests, the
+price of any sharp surface under position error. For uses that need heights at points (levelling, volumes over small
+areas) M or its bicubic upsampling are the better choice; G is for the shape of the terrain: slopes, drainage, breaklines
+and visualisation.
 
 \paragraph{Inherited error.} G inherits all of M's error at 8~m, including canopy residuals under forest and steps
 between source areas; it adds detail to the surface it is given.
@@ -366,7 +412,8 @@ between source areas; it adds detail to the surface it is given.
 \paragraph{Training domain.} The training lidar is alpine and mid-latitude mountain terrain; Nepal's floodplains,
 terraces and the soft rock of the Churia have no counterpart in it (Section~\ref{sec:future}).
 
-\paragraph{Release.} G is first released for Bagmati Province with the setting chosen in Section~\ref{sec:cost}, shown on
+\paragraph{Release.} G is first released for Bagmati Province with the setting chosen in Section~\ref{sec:cost} (in
+production at the time of writing), shown on
 the web map at zooms 15--17 as an option separate from the measured models. A national release depends on its cost and
 on a comparison against the 2~m composites at Langtang~\citep{shean2026langtang} and
 Chamoli~\citep{bhushan2021chamoli}.
@@ -388,9 +435,12 @@ Churia box), where ICESat-2 ground photons are sparse.
 \end{itemize}
 
 \section{Data and code availability}
-Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g} (\texttt{code/g/}: \texttt{error\_model.py},
-\texttt{make\_patches.py}, \texttt{g\_model.py}, \texttt{g\_apply.py}, \texttt{g\_bench.py}, \texttt{g\_region.py},
-\texttt{g\_tiles.py}). Input model M: NepalDTM v2~\citep{paudel2026nepaldtmv2}, data at
+\begin{sloppypar}
+Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g}, folder \texttt{code/g/}: error model
+(\texttt{error\_model.py}), training patches (\texttt{make\_patches.py}), model and training (\texttt{g\_model.py}),
+inference (\texttt{g\_apply.py}, \texttt{g\_region.py}, \texttt{g\_tiles.py}), sampling benchmark (\texttt{g\_bench.py}),
+model comparison (\texttt{g\_compare.py}) and photon tests (\texttt{g\_photon\_limits.py}).
+\end{sloppypar} Input model M: NepalDTM v2~\citep{paudel2026nepaldtmv2}, data at
 \url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data}. G test tiles:
 \url{https://nepaldtm.achyutpdl.com/map?v=g}. The model weights and the Bagmati release will be deposited on Zenodo.
 

@@ -70,7 +70,7 @@ def fig_loss():
 
 def fig_eval():
     rows = []
-    for f in sorted(CK.glob("eval_0*.json")):
+    for f in sorted(CK.glob("eval_*.json"), key=lambda f: int(f.stem.split("_")[1])):
         d = json.loads(f.read_text())
         step = int(f.stem.split("_")[1])
         if step < 1000:
@@ -129,7 +129,7 @@ def fig_compare(name, r0, c0, n, zoom, out, note):
 def fig_seams():
     fig, ax = plt.subplots(figsize=(5.5, 2.4))
     for name, lab, col in (("chitwan", "Chitwan, block-constant projection", "#dc143c"),
-                           ("churia", "Churia, smooth projection", "#003893")):
+                           ("churia_fast_s24", "Churia, smooth projection", "#003893")):
         g = rasterio.open(APPLY / f"{name}_G_1m.tif").read(1).astype("f8")
         b = rasterio.open(APPLY / f"{name}_bicubic_1m.tif").read(1).astype("f8")
         for z, ls, l2 in ((g, "-", lab), (b, ":", None)):
@@ -141,7 +141,7 @@ def fig_seams():
     ax.set_xlabel("column position within the 8 m cell (1 m pixels)")
     ax.set_ylabel("roughness / median")
     h, l = ax.get_legend_handles_labels()
-    l = [s.replace("bicubic (chitwan)", "bicubic, Chitwan").replace("bicubic (churia)", "bicubic, Churia") for s in l]
+    l = [s.replace("bicubic (chitwan)", "bicubic, Chitwan").replace("bicubic (churia_fast_s24)", "bicubic, Churia") for s in l]
     ax.legend(h, l, frameon=False, fontsize=7, loc="center left", bbox_to_anchor=(1.0, 0.5))
     save(fig, "fig05_seam_diagnostic")
 
@@ -221,8 +221,8 @@ def fig_detail_maps():
     """Churia: where G adds relief beyond bicubic, and held-out photon errors of G."""
     import pandas as pd
     from pyproj import Transformer
-    g = rasterio.open(APPLY / "churia_G_1m.tif")
-    gz = g.read(1); bz = rasterio.open(APPLY / "churia_bicubic_1m.tif").read(1)
+    g = rasterio.open(APPLY / "churia_fast_s24_G_1m.tif")
+    gz = g.read(1); bz = rasterio.open(APPLY / "churia_fast_s24_bicubic_1m.tif").read(1)
     d = gz - bz
     T, crs = g.transform, g.crs
     ext = (T.c, T.c + T.a * gz.shape[1], T.f + T.e * gz.shape[0], T.f)
@@ -353,9 +353,9 @@ if __name__ == "__main__":
     fig_error_model()
     fig_loss()
     fig_eval()
-    fig_compare("chitwan", 600, 4000, 1500, (500, 500, 400), "fig03_chitwan_floodplain",
-                "Generated with the block-constant projection; the faint 8 m grid is the artefact of Section 5.4.")
-    fig_compare("churia", 1500, 1500, 2000, (700, 700, 400), "fig04_churia_hills",
-                "Generated with the smooth projection.")
+    fig_compare("chitwan_fast_s24", 600, 4000, 1500, (500, 500, 400), "fig03_chitwan_floodplain",
+                "Final model, 10 steps x 2 samples, smooth projection.")
+    fig_compare("churia_fast_s24", 1500, 1500, 2000, (700, 700, 400), "fig04_churia_hills",
+                "Final model, 10 steps x 2 samples, smooth projection.")
     fig_seams()
     print("figures ->", OUT)
