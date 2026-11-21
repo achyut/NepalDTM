@@ -38,7 +38,7 @@ CK = ROOT / "data" / "checkpoints" / "g_model"
 RSCALE = 2.0  # metres per unit of the residual target
 T_STEPS = 1000
 PROJECT_ITERS = 8  # smooth consistency projection: residual block-mean error shrinks ~geometrically per pass
-DEV = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+DEV = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 
 # ----------------------------------------------------------------------------- data
