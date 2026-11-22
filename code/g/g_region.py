@@ -56,14 +56,14 @@ class R2:
         self.s3.upload_file(str(path), self.bucket, self.prefix + path.name)
 
 
-def auto_bs(net, ens, steps, cap=64, probe=4):
+def auto_bs(net, ens, steps, half=False, cap=64, probe=4):
     """Windows per batch that fit the free GPU memory: measure a few windows, keep generous headroom."""
     if DEV.type != "cuda":
         return 8
     x = torch.zeros(probe * ens, 1, WIN, WIN, device=DEV)
     torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()
     base = torch.cuda.memory_allocated()
-    with torch.no_grad():
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=half):
         sample(net, x, n_steps=2)
     per = max((torch.cuda.max_memory_allocated() - base) / probe, 1)
     del x; torch.cuda.empty_cache()
@@ -89,6 +89,8 @@ def main():
     ap.add_argument("--ens", type=int, default=4)
     ap.add_argument("--stride", type=int, default=24)
     ap.add_argument("--tile", type=int, default=52, help="tile core in strides (52 x 24 x 8 m = 9.98 km)")
+    ap.add_argument("--fp32", action="store_true", help="full precision on CUDA (default there: float16 autocast, "
+                    "several times faster on T4/L4 tensor cores; held-out scores identical)")
     ap.add_argument("--bs", default="auto", help="windows per GPU batch, or auto (fit to free GPU memory)")
     ap.add_argument("--ckpt")
     ap.add_argument("--limit", type=int, default=0, help="stop after this many new tiles (testing)")
@@ -110,8 +112,12 @@ def main():
     net = UNet().to(DEV)
     s = torch.load(p, map_location=DEV)
     net.load_state_dict(s["ema"]); net.eval()
-    bs = auto_bs(net, a.ens, a.steps) if a.bs == "auto" else int(a.bs)
-    print(f"batch size {bs} windows", flush=True)
+    half = DEV.type == "cuda" and not a.fp32
+    if DEV.type == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+    bs = auto_bs(net, a.ens, a.steps, half) if a.bs == "auto" else int(a.bs)
+    print(f"batch size {bs} windows, {'float16' if half else 'float32'}", flush=True)
 
     src = rasterio.open(a.dtm or DTM)
     # tiles, windows and noise seeds are indexed on the national 8 m grid, so a subset input gives identical tiles
@@ -163,7 +169,7 @@ def main():
             noise = torch.cat([torch.randn(a.ens, 1, 256, 256, generator=torch.Generator().manual_seed(i * 100003 + j))
                                for i, j in chunk])
             try:
-                with torch.no_grad():
+                with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=half):
                     z = sample(net, x, n_steps=a.steps, noise=noise).float()
             except torch.OutOfMemoryError:
                 # results do not depend on the batch split (noise is seeded per window), so shrink and retry
