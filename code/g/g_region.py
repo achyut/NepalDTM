@@ -82,6 +82,7 @@ def main():
     ap.add_argument("--reverse", action="store_true", help="process tiles last-first (a second machine)")
     ap.add_argument("--r2-prefix", help="also upload each tile to this R2 key prefix and skip tiles already there "
                     "(needs R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET)")
+    ap.add_argument("--delete-uploaded", action="store_true", help="delete each local tile once it is in R2")
     ap.add_argument("--skip-url", help="public base URL; skip tiles another machine has already published there")
     a = ap.parse_args()
     S, TILE = a.stride, a.tile * a.stride
@@ -168,6 +169,8 @@ def main():
         f.with_suffix(".part.tif").rename(f)
         if r2:
             r2.put(f)
+            if a.delete_uploaded:
+                f.unlink()
         el = time.time() - t0
         left = len(todo) - n - 1
         print(f"  tile {ti},{tj}: {len(jobs)} windows; {n + 1}/{len(todo)} done, {el / nwin:.2f} s/window, "
