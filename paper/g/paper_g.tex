@@ -160,7 +160,9 @@ noise schedule~\citep{nichol2021improved} and $v$-prediction~\citep{salimans2022
 degraded afresh with the error model of M, rotated or flipped, and the loss minimised with
 AdamW~\citep{loshchilov2019adamw}; an exponential moving average of the weights is used for inference. Training ran for
 150{,}000 steps on one laptop, a MacBook Pro with an Apple M4 Max (32-core GPU, 36~GB unified memory) using PyTorch~2.15
-with its Metal (MPS) backend, at about 1.3~s per step (55--80 hours); the same machine ran all inference. The loss falls
+with its Metal (MPS) backend, at about 1.3~s per step (55--80 hours). Inference runs on an NVIDIA A100 GPU with
+high system memory (Google Colab, ``High-RAM''), with the laptop for tests and part of Bagmati
+(Section~\ref{sec:cost}). The loss falls
 quickly over the first 2{,}000 steps and slowly thereafter (Figure~\ref{fig:loss}).
 \fig[0.3]{fig10_pipeline}{G in training (top) and inference (bottom).}{fig:pipeline}
 \begin{table}[!htbp]
@@ -180,7 +182,8 @@ Weights used & exponential moving average, decay 0.999 \\
 Sampling & DDIM, 10--50 steps, median of 2--4 samples (Section~\ref{sec:cost}) \\
 Projection & smooth block-mean correction, 8 passes, per sample and after blending \\
 Windows & 256~m every 192~m (64~m overlap), raised-cosine blending \\
-Hardware & one laptop GPU (Apple M4 Max, 36~GB), PyTorch MPS backend \\
+Hardware, training & Apple M4 Max laptop GPU (36~GB), PyTorch MPS \\
+Hardware, inference & NVIDIA A100 (40/80~GB), high system memory, PyTorch CUDA \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -227,26 +230,31 @@ less cost.
 \item Sampling noise moves scores by 0.01--0.02~m, which explains $20\times2$ scoring below $10\times2$; the small edge of
 $20\times4$ over $10\times2$ is consistent in both measures.
 \end{itemize}
-Bagmati Province (20{,}300~km$^2$) is generated with $10\times2$. Its 261 tiles of 10~km hold 0.73~million windows
-including the tile margins, and the run measures 0.53~s per window including reading, blending and writing, about
-4.5 days on the laptop; $20\times4$ would take about 19 days and $50\times4$ about 50. With
+Bagmati Province (20{,}300~km$^2$) is generated with $10\times2$ in 261 tiles of 10~km, 0.73~million windows
+including the tile margins. Including reading, blending and writing, a window takes 0.14~s on an A100 with high system
+memory (batches of 32--64 windows; about 6.5 minutes per full tile) against 0.53~s on the laptop, so Bagmati needs about
+28 A100-hours, and the whole country (about 5.3~million windows) about 8.5 A100-days. Bagmati was split between the two:
+144 tiles on the A100 and 117 on the laptop, which join without seams because every window is seeded by its position on
+the national grid (the height step across a tile boundary, 0.35--0.53~m, equals the step between neighbouring pixels
+inside each tile). The remaining provinces run on the A100. Each tile needs about 10~GB of system memory at its peak,
+hence the high-memory runtime. With
 LERC compression~\citep{esri_lerc} at 1~cm maximum error, as for M, the 1~m surface takes 1.1~MB per km$^2$: about 22~GB
 for Bagmati and 160~GB for Nepal.
 \begin{table}[!htbp]
 \centering\small
 \caption{Sampling settings of the final model (150{,}000 steps) on 256 held-out patches. Gain is the RMSE reduction
-against bicubic (1.294~m). Speed-up is against 50 steps with four samples; days for Bagmati scale the measured 0.53~s per
-window of $10\times2$.}
+against bicubic (1.294~m). Speed-up is against 50 steps with four samples; A100-hours for Bagmati scale the measured
+0.14~s per window of $10\times2$.}
 \label{tab:speed}
 \begin{tabular}{lrrrrr}
 \toprule
-Steps $\times$ samples & RMSE (m) & Gain & Slope corr. & Speed-up & Bagmati (days)\\
+Steps $\times$ samples & RMSE (m) & Gain & Slope corr. & Speed-up & Bagmati (A100-h)\\
 \midrule
-$50\times4$ (reference) & 1.251 & 3.3\% & 0.700 & 1.0$\times$ & 50\\
-$20\times4$ & 1.246 & 3.7\% & 0.706 & 2.7$\times$ & 19\\
-$20\times2$ & 1.261 & 2.6\% & 0.685 & 5.9$\times$ & 9\\
-$10\times2$ (used) & 1.250 & 3.4\% & 0.697 & 11.2$\times$ & 4.5\\
-$20\times1$ & 1.278 & 1.2\% & 0.675 & 11.8$\times$ & 4\\
+$50\times4$ (reference) & 1.251 & 3.3\% & 0.700 & 1.0$\times$ & 310\\
+$20\times4$ & 1.246 & 3.7\% & 0.706 & 2.7$\times$ & 115\\
+$20\times2$ & 1.261 & 2.6\% & 0.685 & 5.9$\times$ & 53\\
+$10\times2$ (used) & 1.250 & 3.4\% & 0.697 & 11.2$\times$ & 28\\
+$20\times1$ & 1.278 & 1.2\% & 0.675 & 11.8$\times$ & 27\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -412,10 +420,11 @@ between source areas; it adds detail to the surface it is given.
 \paragraph{Training domain.} The training lidar is alpine and mid-latitude mountain terrain; Nepal's floodplains,
 terraces and the soft rock of the Churia have no counterpart in it (Section~\ref{sec:future}).
 
-\paragraph{Release.} G is first released for Bagmati Province with the setting chosen in Section~\ref{sec:cost} (in
-production at the time of writing), shown on
-the web map at zooms 15--17 as an option separate from the measured models. A national release depends on its cost and
-on a comparison against the 2~m composites at Langtang~\citep{shean2026langtang} and
+\paragraph{Release.} G is first released for Bagmati Province (complete: 261 tiles) with the setting chosen in
+Section~\ref{sec:cost}, shown on
+the web map at zooms 15--17 as an option separate from the measured models. The other six provinces are being
+generated on the A100, after which the map uses national archives built across province borders. A national release
+also depends on a comparison against the 2~m composites at Langtang~\citep{shean2026langtang} and
 Chamoli~\citep{bhushan2021chamoli}.
 
 \section{Future work: national lidar from the Survey Department}
