@@ -56,19 +56,20 @@ class R2:
         self.s3.upload_file(str(path), self.bucket, self.prefix + path.name)
 
 
-def auto_bs(net, ens, steps, cap=64):
-    """Windows per batch that fit the free GPU memory: measure one window, keep 40% headroom."""
+def auto_bs(net, ens, steps, cap=64, probe=4):
+    """Windows per batch that fit the free GPU memory: measure a few windows, keep generous headroom."""
     if DEV.type != "cuda":
         return 8
-    x = torch.zeros(ens, 1, WIN, WIN, device=DEV)
+    x = torch.zeros(probe * ens, 1, WIN, WIN, device=DEV)
     torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()
     base = torch.cuda.memory_allocated()
     with torch.no_grad():
         sample(net, x, n_steps=2)
-    per = max(torch.cuda.max_memory_allocated() - base, 1)
-    free = torch.cuda.mem_get_info()[0]
-    torch.cuda.empty_cache()
-    return int(max(1, min(cap, 0.6 * free / per)))
+    per = max((torch.cuda.max_memory_allocated() - base) / probe, 1)
+    del x; torch.cuda.empty_cache()
+    free, total = torch.cuda.mem_get_info()
+    share = 0.5 if total > 30e9 else 0.35  # small GPUs (T4, L4) fragment sooner
+    return int(max(1, min(cap, share * free / per)))
 
 
 def published(base, fname):
