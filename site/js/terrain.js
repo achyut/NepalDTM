@@ -13,9 +13,10 @@ export const DATA_URL = 'https://nepaldtm-data.achyutpdl.com';
 export const VERSIONS = {
     1: {label: 'v1', date: 'Oct 2026', tiles: '/tiles', cog: `${DATA_URL}/cog`},
     2: {label: 'v2', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`},
-    // G: v2 everywhere, plus generated 1 m detail (zooms 15-17) drawn over the test boxes. Generated, not measured.
-    g: {label: 'NepalDTM-G 1 m (test)', date: 'test', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`,
-        detail: '/tiles/g', detailBounds: [84.449, 27.459, 84.501, 27.511]},
+    // G: v2 everywhere, plus generated 1 m detail (zooms 15-17) over the provinces generated so far (Bagmati).
+    // Generated, not measured.
+    g: {label: 'NepalDTM-G 1 m', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`,
+        detail: '/tiles/g', detailBounds: [80.0, 26.3, 88.3, 30.5]},
 };
 const V = new URLSearchParams(location.search).get('v');
 export const VERSION = V === '1' ? 1 : V === 'g' ? 'g' : 2;

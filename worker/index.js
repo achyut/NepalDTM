@@ -11,7 +11,11 @@
 import { PMTiles } from "pmtiles";
 
 // One archive per model version, both in the same bucket.
-const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles", g: "g/NepalDTM_G_test.webp.pmtiles" };
+const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles" };
+// NepalDTM-G 1 m: one archive per finished province in bucket nepaldtm-g-1m. A tile is served from the first
+// province archive that has it; provinces not generated yet have no archive and are skipped.
+const G_PROVINCES = ["bagmati", "koshi", "madhesh", "gandaki", "lumbini", "karnali", "sudurpashchim"];
+const gKey = (p) => `${p}/NepalDTM_G_${p}.webp.pmtiles`;
 const TILE_PATH = /^\/tiles\/(?:(v2|g)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
@@ -43,6 +47,35 @@ function open(env, version) {
   return archives[version];
 }
 
+// Province archives and their bounds; null once an archive is known to be missing.
+const gArchives = {};
+
+async function gProvince(env, p) {
+  if (!(p in gArchives)) {
+    const a = new PMTiles(new R2Source(env.G1M, gKey(p)));
+    gArchives[p] = a.getHeader().then((h) => ({ a, h }), () => null);
+  }
+  return gArchives[p];
+}
+
+// Web-Mercator tile -> lon/lat bounds
+function tileBounds(z, x, y) {
+  const n = 2 ** z, lon = (v) => (v / n) * 360 - 180;
+  const lat = (v) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * v) / n))) * 180) / Math.PI;
+  return [lon(x), lat(y + 1), lon(x + 1), lat(y)];
+}
+
+async function gTile(env, z, x, y) {
+  const [w, s, e, n] = tileBounds(z, x, y);
+  for (const p of G_PROVINCES) {
+    const g = await gProvince(env, p);
+    if (!g || e < g.h.minLon || w > g.h.maxLon || n < g.h.minLat || s > g.h.maxLat) continue;
+    const t = await g.a.getZxy(z, x, y);
+    if (t) return t;
+  }
+  return null;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -60,7 +93,8 @@ export default {
     const version = which === "v2" ? 2 : which === "g" ? "g" : 1;
     let response;
     try {
-      const result = await open(env, version).getZxy(Number(z), Number(x), Number(y));
+      const result = version === "g" ? await gTile(env, Number(z), Number(x), Number(y))
+        : await open(env, version).getZxy(Number(z), Number(x), Number(y));
       // Tiles are left out where there is no terrain. A 404 says so and, unlike a 204, the cache will hold
       // it, so the empty ground around Nepal costs one lookup rather than one per visit.
       response = result

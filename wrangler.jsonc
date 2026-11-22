@@ -17,7 +17,9 @@
     "not_found_handling": "404-page"
   },
   "r2_buckets": [
-    { "binding": "TILES", "bucket_name": "nepal-dem-8m", "remote": true }
+    { "binding": "TILES", "bucket_name": "nepal-dem-8m", "remote": true },
+    // NepalDTM-G 1 m: one map archive per province, <province>/NepalDTM_G_<province>.webp.pmtiles
+    { "binding": "G1M", "bucket_name": "nepaldtm-g-1m", "remote": true }
   ],
   "observability": {
     "enabled": true,
