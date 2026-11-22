@@ -56,6 +56,20 @@ class R2:
         self.s3.upload_file(str(path), self.bucket, self.prefix + path.name)
 
 
+def sample_fit(net, x, steps, noise, ens):
+    """sample(), halving the batch on CUDA out-of-memory so any GPU size works; results do not depend on the split."""
+    try:
+        with torch.no_grad():
+            return sample(net, x, n_steps=steps, noise=noise).float()
+    except torch.OutOfMemoryError:
+        if x.shape[0] <= ens:
+            raise
+        torch.cuda.empty_cache()
+        h = x.shape[0] // ens // 2 * ens  # whole windows: each window's samples stay together
+        print(f"  GPU memory: splitting a batch of {x.shape[0]}", flush=True)
+        return torch.cat([sample_fit(net, x[:h], steps, noise[:h], ens), sample_fit(net, x[h:], steps, noise[h:], ens)])
+
+
 def published(base, fname):
     """True if base/fname answers 200 to a HEAD request."""
     import urllib.request
@@ -143,8 +157,7 @@ def main():
                                            for i, j in chunk]))[:, None].to(DEV).repeat_interleave(a.ens, 0)
             noise = torch.cat([torch.randn(a.ens, 1, 256, 256, generator=torch.Generator().manual_seed(i * 100003 + j))
                                for i, j in chunk])
-            with torch.no_grad():
-                z = sample(net, x, n_steps=a.steps, noise=noise).float()
+            z = sample_fit(net, x, a.steps, noise, a.ens)
             z = z.view(len(chunk), a.ens, 256, 256).median(1).values.cpu().numpy()
             for (i, j), zz in zip(chunk, z):
                 r, c = (i - i0) * S * 8, (j - j0) * S * 8

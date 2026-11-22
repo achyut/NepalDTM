@@ -39,6 +39,7 @@ def main():
     ap.add_argument("--provinces", nargs="*", default=ALL)
     ap.add_argument("--no-map", action="store_true", help="skip the national map tiles")
     a = ap.parse_args()
+    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")  # less fragmentation on small GPUs
     bucket = os.environ["R2_BUCKET"]
     c = boto3.client("s3", endpoint_url=os.environ["R2_ENDPOINT"], region_name="auto",
                      aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
