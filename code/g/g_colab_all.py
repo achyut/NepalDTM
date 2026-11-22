@@ -6,7 +6,7 @@ uploaded to <province>/tiles/ as it finishes and tiles already there are skipped
 Then build the national map archives (g_tiles_nepal.py). After any stop, run the same command again.
 
 Needs R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
-Run (from code/): python -u g/g_colab_all.py [--bs 32] [--provinces Koshi Madhesh ...]
+Run (from code/): python -u g/g_colab_all.py [--bs auto] [--provinces Koshi Madhesh ...]
 """
 import argparse
 import os
@@ -35,7 +35,7 @@ def fetch(url, path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bs", type=int, default=32)
+    ap.add_argument("--bs", default="auto", help="windows per GPU batch, or auto")
     ap.add_argument("--provinces", nargs="*", default=ALL)
     ap.add_argument("--no-map", action="store_true", help="skip the national map tiles")
     a = ap.parse_args()

@@ -56,18 +56,19 @@ class R2:
         self.s3.upload_file(str(path), self.bucket, self.prefix + path.name)
 
 
-def sample_fit(net, x, steps, noise, ens):
-    """sample(), halving the batch on CUDA out-of-memory so any GPU size works; results do not depend on the split."""
-    try:
-        with torch.no_grad():
-            return sample(net, x, n_steps=steps, noise=noise).float()
-    except torch.OutOfMemoryError:
-        if x.shape[0] <= ens:
-            raise
-        torch.cuda.empty_cache()
-        h = x.shape[0] // ens // 2 * ens  # whole windows: each window's samples stay together
-        print(f"  GPU memory: splitting a batch of {x.shape[0]}", flush=True)
-        return torch.cat([sample_fit(net, x[:h], steps, noise[:h], ens), sample_fit(net, x[h:], steps, noise[h:], ens)])
+def auto_bs(net, ens, steps, cap=64):
+    """Windows per batch that fit the free GPU memory: measure one window, keep 40% headroom."""
+    if DEV.type != "cuda":
+        return 8
+    x = torch.zeros(ens, 1, WIN, WIN, device=DEV)
+    torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()
+    base = torch.cuda.memory_allocated()
+    with torch.no_grad():
+        sample(net, x, n_steps=2)
+    per = max(torch.cuda.max_memory_allocated() - base, 1)
+    free = torch.cuda.mem_get_info()[0]
+    torch.cuda.empty_cache()
+    return int(max(1, min(cap, 0.6 * free / per)))
 
 
 def published(base, fname):
@@ -87,7 +88,7 @@ def main():
     ap.add_argument("--ens", type=int, default=4)
     ap.add_argument("--stride", type=int, default=24)
     ap.add_argument("--tile", type=int, default=52, help="tile core in strides (52 x 24 x 8 m = 9.98 km)")
-    ap.add_argument("--bs", type=int, default=8)
+    ap.add_argument("--bs", default="auto", help="windows per GPU batch, or auto (fit to free GPU memory)")
     ap.add_argument("--ckpt")
     ap.add_argument("--limit", type=int, default=0, help="stop after this many new tiles (testing)")
     ap.add_argument("--dtm", help="8 m input on the national v2 grid (default: the national VRT); may be a subset")
@@ -108,6 +109,8 @@ def main():
     net = UNet().to(DEV)
     s = torch.load(p, map_location=DEV)
     net.load_state_dict(s["ema"]); net.eval()
+    bs = auto_bs(net, a.ens, a.steps) if a.bs == "auto" else int(a.bs)
+    print(f"batch size {bs} windows", flush=True)
 
     src = rasterio.open(a.dtm or DTM)
     # tiles, windows and noise seeds are indexed on the national 8 m grid, so a subset input gives identical tiles
@@ -151,13 +154,26 @@ def main():
         jobs = [(i, j) for i in range(i0, i1 + 1) for j in range(j0, j1 + 1)
                 if not bad[(i - i0) * S:(i - i0) * S + WIN, (j - j0) * S:(j - j0) * S + WIN].all()]
         acc = np.zeros((H * 8, W * 8), "float32"); wsum = np.zeros_like(acc)
-        for k in range(0, len(jobs), a.bs):
-            chunk = jobs[k:k + a.bs]
+        k = 0
+        while k < len(jobs):
+            chunk = jobs[k:k + bs]
             x = torch.from_numpy(np.stack([m8[(i - i0) * S:(i - i0) * S + WIN, (j - j0) * S:(j - j0) * S + WIN]
                                            for i, j in chunk]))[:, None].to(DEV).repeat_interleave(a.ens, 0)
             noise = torch.cat([torch.randn(a.ens, 1, 256, 256, generator=torch.Generator().manual_seed(i * 100003 + j))
                                for i, j in chunk])
-            z = sample_fit(net, x, a.steps, noise, a.ens)
+            try:
+                with torch.no_grad():
+                    z = sample(net, x, n_steps=a.steps, noise=noise).float()
+            except torch.OutOfMemoryError:
+                # results do not depend on the batch split (noise is seeded per window), so shrink and retry
+                del x, noise
+                torch.cuda.empty_cache()
+                if bs == 1:
+                    raise
+                bs = max(1, bs // 2)
+                print(f"  GPU out of memory: batch size now {bs} for the rest of the run", flush=True)
+                continue
+            k += len(chunk)
             z = z.view(len(chunk), a.ens, 256, 256).median(1).values.cpu().numpy()
             for (i, j), zz in zip(chunk, z):
                 r, c = (i - i0) * S * 8, (j - j0) * S * 8
