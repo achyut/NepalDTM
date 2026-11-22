@@ -12,10 +12,12 @@ import { PMTiles } from "pmtiles";
 
 // One archive per model version, both in the same bucket.
 const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles" };
-// NepalDTM-G 1 m: one archive per finished province in bucket nepaldtm-g-1m. A tile is served from the first
-// province archive that has it; provinces not generated yet have no archive and are skipped.
-const G_PROVINCES = ["bagmati", "koshi", "madhesh", "gandaki", "lumbini", "karnali", "sudurpashchim"];
-const gKey = (p) => `${p}/NepalDTM_G_${p}.webp.pmtiles`;
+// NepalDTM-G 1 m in bucket nepaldtm-g-1m: the national archives (four longitude bands, built across province
+// borders) come first; the per-province archives fill in until they exist. A tile is served from the first archive
+// whose bounds hold it and that has it; archives not built yet are skipped.
+const G_ARCHIVES = [0, 1, 2, 3].map((k) => `nepal/NepalDTM_G_nepal_${k}.webp.pmtiles`).concat(
+  ["bagmati", "koshi", "madhesh", "gandaki", "lumbini", "karnali", "sudurpashchim"].map(
+    (p) => `${p}/NepalDTM_G_${p}.webp.pmtiles`));
 const TILE_PATH = /^\/tiles\/(?:(v2|g)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
@@ -47,15 +49,15 @@ function open(env, version) {
   return archives[version];
 }
 
-// Province archives and their bounds; null once an archive is known to be missing.
+// G archives and their headers; null once an archive is known to be missing (until the isolate restarts).
 const gArchives = {};
 
-async function gProvince(env, p) {
-  if (!(p in gArchives)) {
-    const a = new PMTiles(new R2Source(env.G1M, gKey(p)));
-    gArchives[p] = a.getHeader().then((h) => ({ a, h }), () => null);
+async function gArchive(env, key) {
+  if (!(key in gArchives)) {
+    const a = new PMTiles(new R2Source(env.G1M, key));
+    gArchives[key] = a.getHeader().then((h) => ({ a, h }), () => null);
   }
-  return gArchives[p];
+  return gArchives[key];
 }
 
 // Web-Mercator tile -> lon/lat bounds
@@ -67,8 +69,8 @@ function tileBounds(z, x, y) {
 
 async function gTile(env, z, x, y) {
   const [w, s, e, n] = tileBounds(z, x, y);
-  for (const p of G_PROVINCES) {
-    const g = await gProvince(env, p);
+  for (const key of G_ARCHIVES) {
+    const g = await gArchive(env, key);
     if (!g || e < g.h.minLon || w > g.h.maxLon || n < g.h.minLat || s > g.h.maxLat) continue;
     const t = await g.a.getZxy(z, x, y);
     if (t) return t;
