@@ -1093,9 +1093,9 @@ function renderChart(data, length, min, max, km) {
 const FILL_FIX = ' The gap fill no longer leaves rings round small stereo patches (fixed in 1.1 and 2.1).';
 const OLD_FILL = ' Superseded: its gap fill leaves rings up to tens of metres high round small stereo patches.';
 const VERSION_NOTES = {
-    '2.1': ['v2.1: v2.0 with the Copernicus gap fill fixed. Held-out ICESat-2 RMSE 5.3 m (Copernicus 8.7 m).',
+    '2.1': ['v2.1: v2.0 with the Copernicus gap fill fixed. Held-out ICESat-2 RMSE 5.1 m (Copernicus 8.7 m).',
         '39% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.' + FILL_FIX],
-    '1.1': ['v1.1: v1.0 with the Copernicus gap fill fixed. Held-out ICESat-2 RMSE 7.0 m (Copernicus 8.7 m).',
+    '1.1': ['v1.1: v1.0 with the Copernicus gap fill fixed. Held-out ICESat-2 RMSE 6.9 m (Copernicus 8.7 m).',
         '37% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.' + FILL_FIX],
     '2.0': ['v2.0: held-out ICESat-2 RMSE 5.3 m (Copernicus 8.7 m). Stereo strips are jointly adjusted to ICESat-2 photons.',
         '39% of Nepal has true 8 m detail; the rest is filled from 30 m Copernicus data.' + OLD_FILL],
