@@ -8,18 +8,22 @@ import {stopsFor} from './palettes.js';
 export {TILE_MAX_ZOOM}; // highest zoom in the archive, about 8.4 m per pixel over Nepal
 
 export const DATA_URL = 'https://nepaldtm-data.achyutpdl.com';
-// Two releases of the model. ?v=1 shows the first (October 2026); anything else shows v2, whose stereo strips
-// are jointly adjusted to ICESat-2 photons. Each has its own tile archive behind the worker and its own 8 m COGs.
+// Releases of the model, newest first; ?v= picks one, no ?v= is the newest. 1.1 and 2.1 (Nov 2026) are 1.0
+// and 2.0 with the Copernicus gap fill fixed (it left rings round small stereo patches); 2.x has stereo strips
+// jointly adjusted to ICESat-2 photons. Each has its own tile path behind the worker and its own 8 m COGs.
+// ?v=1 and ?v=2 keep meaning 1.0 and 2.0, as in links already shared.
 export const VERSIONS = {
-    1: {label: 'v1', date: 'Oct 2026', tiles: '/tiles', cog: `${DATA_URL}/cog`},
-    2: {label: 'v2', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`},
-    // G: v2 everywhere, plus generated 1 m detail (zooms 15-17) over the provinces generated so far (Bagmati).
+    '2.1': {label: 'v2.1', date: 'Nov 2026', tiles: '/tiles/v2.1', cog: `${DATA_URL}/v2.1/out_v2`},
+    '1.1': {label: 'v1.1', date: 'Nov 2026', tiles: '/tiles/v1.1', cog: `${DATA_URL}/v1.1/out`},
+    '2.0': {label: 'v2.0', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`},
+    '1.0': {label: 'v1.0', date: 'Oct 2026', tiles: '/tiles', cog: `${DATA_URL}/cog`},
+    // G: v2.1 everywhere, plus generated 1 m detail (zooms 15-17) over the provinces generated so far.
     // Generated, not measured.
-    g: {label: 'NepalDTM-G 1 m', date: 'Nov 2026', tiles: '/tiles/v2', cog: `${DATA_URL}/v2/out_v2`,
+    g: {label: 'NepalDTM-G 1 m', date: 'Nov 2026', tiles: '/tiles/v2.1', cog: `${DATA_URL}/v2.1/out_v2`,
         detail: '/tiles/g', detailBounds: [80.0, 26.3, 88.3, 30.5]},
 };
 const V = new URLSearchParams(location.search).get('v');
-export const VERSION = V === '1' ? 1 : V === 'g' ? 'g' : 2;
+export const VERSION = {1: '1.0', 2: '2.0'}[V] ?? (V in VERSIONS ? V : '2.1');
 export const COG_URL = VERSIONS[VERSION].cog;
 // Tiles come from this site's own worker, which reads the archive in R2 and lets Cloudflare cache each tile
 // at the edge. Reading byte ranges from the 3 GB archive missed that cache on every single tile.

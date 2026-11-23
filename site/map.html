@@ -139,11 +139,13 @@
     <div class="panel-body" id="panel-body">
         <section>
             <h2>Model version</h2>
-            <div class="seg" role="group" aria-label="Model version">
-                <button type="button" id="ver-2" aria-pressed="true">v2 · Nov</button>
-                <button type="button" id="ver-1" aria-pressed="false">v1 · Oct</button>
-                <button type="button" id="ver-g" aria-pressed="false">NepalDTM-G · 1 m</button>
-            </div>
+            <select id="ver" class="ver-select" aria-label="Model version">
+                <option value="2.1">v2.1 · Nov 2026 (latest)</option>
+                <option value="1.1">v1.1 · Nov 2026</option>
+                <option value="2.0">v2.0 · Nov 2026</option>
+                <option value="1.0">v1.0 · Oct 2026</option>
+                <option value="g">NepalDTM-G · 1 m (generated)</option>
+            </select>
             <p class="hint" id="ver-note"></p>
         </section>
         <section>

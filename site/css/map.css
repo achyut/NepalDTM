@@ -65,6 +65,7 @@ body.viewer { margin: 0; height: 100dvh; overflow: hidden; background: var(--pag
 .panel section { padding: 12px 0; border-bottom: 1px solid var(--glass-line); }
 .panel h2 { font: 600 11px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; }
 
+.ver-select { width: 100%; font: 500 13px var(--sans); color: var(--ink); background: var(--hover); border: 1px solid var(--line, transparent); padding: 7px 8px; cursor: pointer; }
 .seg { display: inline-flex; background: var(--hover); padding: 3px; }
 .seg button { border: 0; background: transparent; color: var(--ink-2); font: 500 13px var(--sans); padding: 6px 18px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }

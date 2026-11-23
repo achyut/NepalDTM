@@ -1,4 +1,4 @@
-// Serves the terrain tiles at /tiles/{z}/{x}/{y}.webp (v1) and /tiles/v2/{z}/{x}/{y}.webp (v2), and everything
+// Serves the terrain tiles at /tiles/{z}/{x}/{y}.webp (v1.0), /tiles/<v>/{z}/{x}/{y}.webp (v1.1, v2 = v2.0, v2.1, g), and everything
 // else from the built site.
 //
 // The map used to read byte ranges out of the 3 GB PMTiles archive directly. Cloudflare will not hold ranges
@@ -10,15 +10,17 @@
 
 import { PMTiles } from "pmtiles";
 
-// One archive per model version, both in the same bucket.
-const ARCHIVES = { 1: "NepalDTM.webp.pmtiles", 2: "v2/NepalDTM_v2.webp.pmtiles" };
+// One archive per release, all in the same bucket. A corrected release gets new keys and a new tile path, so
+// tiles cached as immutable under the old path are never served in its place.
+const ARCHIVES = { "1": "NepalDTM.webp.pmtiles", "v1.1": "v1.1/NepalDTM_v1.1.webp.pmtiles",
+  "v2": "v2/NepalDTM_v2.webp.pmtiles", "v2.1": "v2.1/NepalDTM_v2.1.webp.pmtiles" };
 // NepalDTM-G 1 m in bucket nepaldtm-g-1m: the national archives (four longitude bands, built across province
 // borders) come first; the per-province archives fill in until they exist. A tile is served from the first archive
 // whose bounds hold it and that has it; archives not built yet are skipped.
 const G_ARCHIVES = [0, 1, 2, 3].map((k) => `nepal/NepalDTM_G_nepal_${k}.webp.pmtiles`).concat(
   ["bagmati", "koshi", "madhesh", "gandaki", "lumbini", "karnali", "sudurpashchim"].map(
     (p) => `${p}/NepalDTM_G_${p}.webp.pmtiles`));
-const TILE_PATH = /^\/tiles\/(?:(v2|g)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
+const TILE_PATH = /^\/tiles\/(?:(v1\.1|v2\.1|v2|g)\/)?(\d+)\/(\d+)\/(\d+)\.webp$/;
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
 // One R2 object, read in ranges. The archive's own directories are small and the PMTiles client keeps them,
@@ -71,7 +73,7 @@ async function gTile(env, z, x, y) {
   const [w, s, e, n] = tileBounds(z, x, y);
   for (const key of G_ARCHIVES) {
     const g = await gArchive(env, key);
-    if (!g || e < g.h.minLon || w > g.h.maxLon || n < g.h.minLat || s > g.h.maxLat) continue;
+    if (!g || z < g.h.minZoom || z > g.h.maxZoom || e < g.h.minLon || w > g.h.maxLon || n < g.h.minLat || s > g.h.maxLat) continue;
     const t = await g.a.getZxy(z, x, y);
     if (t) return t;
   }
@@ -92,7 +94,7 @@ export default {
     if (hit) return hit;
 
     const [, which, z, x, y] = tile;
-    const version = which === "v2" ? 2 : which === "g" ? "g" : 1;
+    const version = which ?? "1";
     let response;
     try {
       const result = version === "g" ? await gTile(env, Number(z), Number(x), Number(y))
