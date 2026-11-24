@@ -17,12 +17,6 @@ identifiers:
   - type: doi
     value: "10.5281/zenodo.24483831"
     description: "NepalDTM v1.1 data (Zenodo, gap-fill fix)"
-  - type: doi
-    value: "10.5281/zenodo.24327134"
-    description: "NepalDTM v2.0 data (Zenodo, superseded)"
-  - type: doi
-    value: "10.5281/zenodo.24327066"
-    description: "NepalDTM v1.0 data (Zenodo, superseded)"
 license: MIT
 keywords:
   - digital terrain model
