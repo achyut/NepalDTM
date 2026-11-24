@@ -1,22 +1,28 @@
 cff-version: 1.2.0
 message: "If you use NepalDTM v2, please cite the v2 paper (EarthArXiv, doi:10.31223/X5B23B)."
 title: "NepalDTM v2: Improving on NepalDTM v1 with ICESat-2-Adjusted Stereo Strips for a National 8 m Terrain Model of Nepal"
-version: "2.0"
-date-released: 2026-11-17
+version: "2.1"
+date-released: 2026-11-23
 authors:
   - family-names: Paudel
     given-names: Achyut
     email: achyut.pdl@gmail.com
 url: "https://nepaldtm.achyutpdl.com"
 repository-code: "https://github.com/achyut/NepalDTM"
-repository-artifact: "https://doi.org/10.5281/zenodo.24327134"
+repository-artifact: "https://doi.org/10.5281/zenodo.24483836"
 identifiers:
   - type: doi
+    value: "10.5281/zenodo.24483836"
+    description: "NepalDTM v2.1 data (Zenodo, gap-fill fix)"
+  - type: doi
+    value: "10.5281/zenodo.24483831"
+    description: "NepalDTM v1.1 data (Zenodo, gap-fill fix)"
+  - type: doi
     value: "10.5281/zenodo.24327134"
-    description: "NepalDTM v2 data (Zenodo)"
+    description: "NepalDTM v2.0 data (Zenodo, superseded)"
   - type: doi
     value: "10.5281/zenodo.24327066"
-    description: "NepalDTM v1 data (Zenodo)"
+    description: "NepalDTM v1.0 data (Zenodo, superseded)"
 license: MIT
 keywords:
   - digital terrain model
