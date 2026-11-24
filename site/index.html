@@ -207,25 +207,25 @@
     <div class="wrap">
         <p class="kicker">Data</p>
         <h2 class="title">Download and use it</h2>
-        <p class="intro">Free to use with attribution under CC BY 4.0. The full datasets are archived on Zenodo with DOIs: <a href="https://doi.org/10.5281/zenodo.24327134">v2 (doi:10.5281/zenodo.24327134)</a> and <a href="https://doi.org/10.5281/zenodo.24327066">v1 (doi:10.5281/zenodo.24327066)</a>. Click any point on the <a href="/map">map</a> to get the tile that covers it.</p>
+        <p class="intro">Free to use with attribution under CC BY 4.0. The full datasets are archived on Zenodo with DOIs: <a href="https://doi.org/10.5281/zenodo.24483836">v2.1 (doi:10.5281/zenodo.24483836)</a> and <a href="https://doi.org/10.5281/zenodo.24483831">v1.1 (doi:10.5281/zenodo.24483831)</a>; the earlier v2.0 and v1.0 records stay online but have gap-fill rings. Click any point on the <a href="/map">map</a> to get the tile that covers it.</p>
         <div class="products">
             <div class="product">
                 <h3>Cloud Optimized GeoTIFF tiles</h3>
                 <p>{{tiles}} tiles of 24 × 24 km, each as <code>_dtm</code> (bare earth), <code>_dem</code> (surface) and <code>_aux</code>
-                    (band 1 source: 1 = HMA 8 m stereo, 2 = Copernicus fill; band 2 expected error in decimetres). v1 and v2 use the same tile names and grid.</p>
+                    (band 1 source: 1 = HMA 8 m stereo, 2 = Copernicus fill; band 2 expected error in decimetres). All versions use the same tile names and grid.</p>
                 <a class="btn line go" href="/map">Pick on map</a>
             </div>
             <div class="product">
                 <h3>Web map tiles (PMTiles)</h3>
                 <p>Bare earth as Terrarium-encoded terrain tiles (lossless WebP, heights to 0.1 m), zoom 5–14, for MapLibre and other web maps.</p>
-                <a class="btn line go" href="https://doi.org/10.5281/zenodo.24327134">v2 on Zenodo</a> <a class="btn line go" href="https://doi.org/10.5281/zenodo.24327066">v1 on Zenodo</a>
+                <a class="btn line go" href="https://doi.org/10.5281/zenodo.24483836">v2.1 on Zenodo</a> <a class="btn line go" href="https://doi.org/10.5281/zenodo.24483831">v1.1 on Zenodo</a>
             </div>
         </div>
         <pre><button class="copy" data-copy>Copy</button><code># Stream one tile with GDAL, no download needed (mirror for quick access)
-gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/v2/out_v2/E0360N3072_dtm.tif
+gdalinfo /vsicurl/https://nepaldtm-data.achyutpdl.com/v2.1/out_v2/E0360N3072_dtm.tif
 
 # Or download every tile (zipped by layer) from Zenodo
-# https://doi.org/10.5281/zenodo.24327134</code></pre>
+# https://doi.org/10.5281/zenodo.24483836</code></pre>
         <dl class="specs">
             <div><dt>Grid</dt><dd>8 m</dd></div>
             <div><dt>Projection</dt><dd>UTM 45N · EPSG:32645</dd></div>
