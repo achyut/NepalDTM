@@ -42,8 +42,6 @@ The tiles are in the `nepal-dem-8m` R2 bucket, served at `nepaldtm-data.achyutpd
 |---|---|
 | v2.1 data (recommended): DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24483836](https://doi.org/10.5281/zenodo.24483836) |
 | v1.1 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24483831](https://doi.org/10.5281/zenodo.24483831) |
-| v2.0 data (superseded: gap-fill rings) | [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) |
-| v1.0 data (superseded: gap-fill rings; numbers in the v1 paper) | [doi:10.5281/zenodo.24327066](https://doi.org/10.5281/zenodo.24327066) |
 
 Zenodo is the archived copy to download and cite. The web map and quick single-tile access stream from a mirror at
 `https://nepaldtm-data.achyutpdl.com` (v1 COGs under `cog/`, v2 under `v2/out_v2/`), e.g.
