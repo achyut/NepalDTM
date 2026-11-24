@@ -19,7 +19,7 @@ from pathlib import Path
 import boto3
 
 DATA = "https://nepaldtm-data.achyutpdl.com/g/colab"
-ALL = ["Koshi", "Madhesh", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"]  # Bagmati is done
+ALL = ["Bagmati", "Koshi", "Madhesh", "Gandaki", "Lumbini", "Karnali", "Sudurpashchim"]  # all from v2.1
 HERE = Path(__file__).resolve().parent
 
 
