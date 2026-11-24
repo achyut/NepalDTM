@@ -51,7 +51,7 @@ This manuscript is a \textbf{non-peer-reviewed preprint} submitted to EarthArXiv
 \journalnote\\[12pt]
 Code: \url{https://github.com/achyut/NepalDTM} (branch \texttt{g})\\
 Viewer: \url{https://nepaldtm.achyutpdl.com/map?v=g}\\
-Input model (NepalDTM v2): \url{https://doi.org/10.31223/X5B23B}; data \url{https://doi.org/10.5281/zenodo.24327134}\\
+Input model (NepalDTM v2): \url{https://doi.org/10.31223/X5B23B}; data (v2.1) \url{https://doi.org/10.5281/zenodo.24483836}\\
 NepalDTM v1: \url{https://doi.org/10.31223/X5DR5M}\\[12pt]
 Comments and feedback are welcome: \email
 \end{minipage}
@@ -449,8 +449,10 @@ Code: \url{https://github.com/achyut/NepalDTM}, branch \texttt{g}, folder \textt
 (\texttt{error\_model.py}), training patches (\texttt{make\_patches.py}), model and training (\texttt{g\_model.py}),
 inference (\texttt{g\_apply.py}, \texttt{g\_region.py}, \texttt{g\_tiles.py}), sampling benchmark (\texttt{g\_bench.py}),
 model comparison (\texttt{g\_compare.py}) and photon tests (\texttt{g\_photon\_limits.py}).
-\end{sloppypar} Input model M: NepalDTM v2~\citep{paudel2026nepaldtmv2}, data at
-\url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data}. G test tiles:
+\end{sloppypar} Input model M: NepalDTM v2~\citep{paudel2026nepaldtmv2}. The experiments here used the v2.0 data
+\url{https://doi.org/10.5281/zenodo.24327134}~\citep{paudel2026nepaldtmv2data}; the national 1~m generation uses v2.1
+\url{https://doi.org/10.5281/zenodo.24483836}~\citep{paudel2026nepaldtmv21data}, which removes rings left by the
+Copernicus gap fill and lowers the held-out photon RMSE from 5.26 to 5.12~m. G test tiles:
 \url{https://nepaldtm.achyutpdl.com/map?v=g}. The model weights and the Bagmati release will be deposited on Zenodo.
 
 \FloatBarrier

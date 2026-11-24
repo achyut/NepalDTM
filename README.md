@@ -28,8 +28,8 @@ within this table only.
 - Validation: [`validation/validation_report_v2.json`](validation/validation_report_v2.json),
   [`validation/validation_v1_v2.json`](validation/validation_v1_v2.json)
 - Build: [`code/run_v2.sh`](code/run_v2.sh) runs the whole v2 chain after the v1 inputs are in `code/data/nw/`
-- Data: Zenodo, [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) (DEM, DTM and aux COG tiles, and
-  `NepalDTM_v2.webp.pmtiles` for web maps); map with a v1/v2 switch at https://nepaldtm.achyutpdl.com/map
+- Data: Zenodo, [doi:10.5281/zenodo.24483836](https://doi.org/10.5281/zenodo.24483836) (v2.1, DEM, DTM and aux COG tiles, and
+  `NepalDTM_v2.1.webp.pmtiles` for web maps); map with a version switch at https://nepaldtm.achyutpdl.com/map
 
 ## NepalDTM-G: generated 1 m (experimental)
 
@@ -67,8 +67,10 @@ Then open http://127.0.0.1:8000/
 
 | Product | Archive (Zenodo, DOI) |
 |---|---|
-| v2 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) |
-| v1 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24327066](https://doi.org/10.5281/zenodo.24327066) |
+| v2.1 data (recommended): DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24483836](https://doi.org/10.5281/zenodo.24483836) |
+| v1.1 data: DTM, DEM and aux COG tiles (zipped by layer), WebP PMTiles, validation | [doi:10.5281/zenodo.24483831](https://doi.org/10.5281/zenodo.24483831) |
+| v2.0 data (superseded: gap-fill rings) | [doi:10.5281/zenodo.24327134](https://doi.org/10.5281/zenodo.24327134) |
+| v1.0 data (superseded: gap-fill rings; numbers in the v1 paper) | [doi:10.5281/zenodo.24327066](https://doi.org/10.5281/zenodo.24327066) |
 
 Zenodo is the archived copy to download and cite. The web map and quick single-tile access stream from a mirror at
 `https://nepaldtm-data.achyutpdl.com` (v1 COGs under `cog/`, v2 under `v2/out_v2/`), e.g.
